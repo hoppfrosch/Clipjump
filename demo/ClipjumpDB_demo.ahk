@@ -6,7 +6,7 @@
 
 #Include %A_ScriptDir%\..\lib\ClipjumpDB.ahk
 
-DB := new ClipjumpDB(A_ScriptDir . "\clipjump.db")
+DB := new ClipjumpDB(A_ScriptDir . "\clipjump.db",1,1)
 
 Version := DB.Ver . " (SQLite: " . DB.Ver_sqlite . ")"
 MsgBox % "Version:" . Version . "`nFilename:" . DB.filename

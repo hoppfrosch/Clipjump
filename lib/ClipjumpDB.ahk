@@ -92,6 +92,8 @@ class ClipjumpDB extends SQLiteDB {
 	*/
 	__New(filename := "clipjump.db", overwriteExisting := 0,  debug := 0) {
 
+		if (this._debug) ; _DBG_
+			OutputDebug % ">[" A_ThisFunc "(filename=" filename ", overwriteExisting =" overwriteExisting ")] (version: " this._version ")" ; _DBG_
 			
 		; Store given parameters within properties
 		this._filename := filename
@@ -129,21 +131,30 @@ class ClipjumpDB extends SQLiteDB {
 			this.__InitDB()
 		}
 
+		if (this._debug) ; _DBG_
+			OutputDebug % "<[" A_ThisFunc "(filename=" filename ", overwriteExisting =" overwriteExisting ")] (version: " this._version ")" ; _DBG_
+	}
 	/*!
 		Destructor: 
 			Closes the database on object deconstruction
 	*/
 	__Delete() {
+		if (this._debug) ; _DBG_
+			OutputDebug % ">[" A_ThisFunc "()]" ; _DBG_
 		If !base.CloseDB() {
-			throw, { what: " SQLite Error", message:  base.ErrorMsg, extra: base.ErrorCode, file: A_LineFile, line: A_LineNumber }
 			this.__exceptionSQLite()
 		}
+		if (this._debug) ; _DBG_
+			OutputDebug % "<[" A_ThisFunc "()]" ; _DBG_
+
 	}
 	/*!
 		__InitDB: 
 			Initializes the database by creating tables and fill in default values ....
 	*/
 	__InitDB() {
+		if (this._debug) ; _DBG_
+			OutputDebug % ">[" A_ThisFunc "()]" ; _DBG_
 		; ------------------------------------------------------------------------------------------------------------
 		; Enable foreign key support: http://www.sqlite.org/foreignkeys.html#fk_enable
 		SQL := "PRAGMA foreign_keys=ON;"
@@ -180,4 +191,8 @@ class ClipjumpDB extends SQLiteDB {
 		 . ");"
 		If !base.Exec(SQL)
 			this.__exceptionSQLite()
+
+		if (this._debug) ; _DBG_
+			OutputDebug % "<[" A_ThisFunc "()]" ; _DBG_
+		}
 }
