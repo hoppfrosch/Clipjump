@@ -22,11 +22,11 @@ class ClipjumpDB extends SQLiteDB {
 	Authors:
 	<hoppfrosch at hoppfrosch@gmx.de>: Original
 */	
-	_version := "0.1.0"
+	_version := "0.1.1"
 	_debug := 0
 	_filename := ""
 
-	; ##################### Properties (AHK >1.1.16.x) #################################################################0
+	; ##################### Properties (AHK >1.1.16.x) #################################################################
 	debug[] {
 	/* ------------------------------------------------------------------------------- 
 	Property: debug [get/set]
@@ -75,6 +75,13 @@ class ClipjumpDB extends SQLiteDB {
 		}
 	}
 
+	; ##################### public methods ##############################################################################
+
+	; ##################### private methods ##############################################################################
+	__exceptionSQLite() {
+		throw, { what: " ClipjumpDB SQLite Error", message:  base.ErrorMsg, extra: base.ErrorCode, file: A_LineFile, line: A_LineNumber }
+	}
+	
 	/*!
 		Constructor: (filename := A_ScriptDir . "/clipjump.db", overwriteExisting := 0)
 			Creates the database object.
@@ -83,24 +90,44 @@ class ClipjumpDB extends SQLiteDB {
 			overwriteExisting - (Optional, Default: 0) Flag to Overwrite existig database 
 				- else the existing datavase will be used.	
 	*/
-	__New(filename := "clipjump.db", overwriteExisting := 0) {
+	__New(filename := "clipjump.db", overwriteExisting := 0,  debug := 0) {
+
+			
+		; Store given parameters within properties
+		this._filename := filename
+		this._debug := debug
+
+		; Call base class constructor
 		base.__New()
 
+		
 		; Remove existing database if flag is set
 		if (overwriteExisting == 1) {
 			If FileExist(filename) {
-				FileDelete, % DBFileName
+				FileDelete, % filename
 			}
 		}
-		; Store given filename in property
-		this._filename := filename
-
+		
+		; Check whether the db file exists - if not it has to be created and initialized 
+		shouldInitDB := 0
+		If !FileExist(filename) {
+			shouldInitDB := 1
+		}
+		else {
+			file := FileOpen(filename,"r")
+			if (File.Length == 0)
+				shouldInitDB := 1
+		}
+		
+		; Open existing or create new database
 		If !base.OpenDB(filename) {
-			throw, { what: " SQLite Error", message:  base.ErrorMsg, extra: base.ErrorCode, file: A_LineFile, line: A_LineNumber }
+			this.__exceptionSQLite()
 		}
 
-		return
-	}
+		; Initialize the database if database file if the flag is set
+		if (shouldInitDB == 1) {
+			this.__InitDB()
+		}
 
 	/*!
 		Destructor: 
@@ -109,6 +136,48 @@ class ClipjumpDB extends SQLiteDB {
 	__Delete() {
 		If !base.CloseDB() {
 			throw, { what: " SQLite Error", message:  base.ErrorMsg, extra: base.ErrorCode, file: A_LineFile, line: A_LineNumber }
+			this.__exceptionSQLite()
 		}
 	}
+	/*!
+		__InitDB: 
+			Initializes the database by creating tables and fill in default values ....
+	*/
+	__InitDB() {
+		; ------------------------------------------------------------------------------------------------------------
+		; Enable foreign key support: http://www.sqlite.org/foreignkeys.html#fk_enable
+		SQL := "PRAGMA foreign_keys=ON;"
+		If !base.Exec(SQL)
+			this.__exceptionSQLite()
+
+		; ------------------------------------------------------------------------------------------------------------
+		; Table Clip
+		SQL := "CREATE TABLE Clip ("
+		 . "id INTEGER PRIMARY KEY,"
+		 . "data TEXT,"
+		 . "sha1 TEXT"
+		 . ");"
+		If !base.Exec(SQL)
+			this.__exceptionSQLite()
+
+		; ------------------------------------------------------------------------------------------------------------
+		; Table Channel
+		SQL := "CREATE TABLE Channel ("
+		 . "id   INTEGER UNIQUE PRIMARY KEY,"
+		 . "name TEXT    UNIQUE"
+		 . ");"
+		If !base.Exec(SQL)
+			this.__exceptionSQLite()
+
+		; ------------------------------------------------------------------------------------------------------------
+		; Table Clip2Channel
+		SQL := "CREATE TABLE Clip2Channel ("
+		 . "  id INTEGER UNIQUE PRIMARY KEY,"
+		 . "  fk_clip REFERENCES clip(id),"
+		 . "  fk_channel REFERENCES channel(id),"
+		 . "  date INTEGER,"
+		 . "  order_number, INTEGER"
+		 . ");"
+		If !base.Exec(SQL)
+			this.__exceptionSQLite()
 }
