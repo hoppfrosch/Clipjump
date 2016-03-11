@@ -164,9 +164,9 @@ class ClipjumpDB extends SQLiteDB {
 		; ------------------------------------------------------------------------------------------------------------
 		; Table Clip
 		SQL := "CREATE TABLE Clip ("
-		 . "id INTEGER PRIMARY KEY,"
-		 . "data TEXT,"
-		 . "sha1 TEXT"
+		 . "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+		 . "data TEXT        NOT NULL,"
+		 . "sha1 TEXT UNIQUE NOT NULL"
 		 . ");"
 		If !base.Exec(SQL)
 			this.__exceptionSQLite()
@@ -174,8 +174,8 @@ class ClipjumpDB extends SQLiteDB {
 		; ------------------------------------------------------------------------------------------------------------
 		; Table Channel
 		SQL := "CREATE TABLE Channel ("
-		 . "id   INTEGER UNIQUE PRIMARY KEY,"
-		 . "name TEXT    UNIQUE"
+		 . "id   INTEGER PRIMARY KEY AUTOINCREMENT,"
+		 . "name TEXT    UNIQUE      NOT NULL"
 		 . ");"
 		If !base.Exec(SQL)
 			this.__exceptionSQLite()
@@ -183,7 +183,7 @@ class ClipjumpDB extends SQLiteDB {
 		; ------------------------------------------------------------------------------------------------------------
 		; Table Clip2Channel
 		SQL := "CREATE TABLE Clip2Channel ("
-		 . "  id INTEGER UNIQUE PRIMARY KEY,"
+		 . "  id INTEGER PRIMARY KEY AUTOINCREMENT,"
 		 . "  fk_clip REFERENCES clip(id),"
 		 . "  fk_channel REFERENCES channel(id),"
 		 . "  date INTEGER,"
