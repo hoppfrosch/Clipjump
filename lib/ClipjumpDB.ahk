@@ -76,7 +76,42 @@ class ClipjumpDB extends SQLiteDB {
 	}
 
 	; ##################### public methods ##############################################################################
+	/*!
+		getChannelByName: (chName)
+			Gets the Channel PK by name - if the given channel does not exist, create a new one.
+		Parameters:
+			chName - Name of the channel
+	*/
+	getChannelByName(chName) {
+		if (this._debug) ; _DBG_
+			OutputDebug % ">[" A_ThisFunc "(chName=" chName ")]" ; _DBG_
 
+		SQL := "SELECT * FROM channel WHERE channel.name = """ chName """;"
+		If !base.Query(SQL, RecordSet)
+			this.__exceptionSQLite()
+		
+		if(!RecordSet.HasRows) {
+			if (this._debug) ; _DBG_
+			OutputDebug % "  [" A_ThisFunc "(chName=" chName ")]: Create new channel" ; _DBG_
+			SQL := "INSERT INTO Channel (name) VALUES ('" chName "');"
+			ret := base.Exec(SQL)
+			If !ret
+				this.__exceptionSQLite()
+		}
+		
+		SQL := "SELECT * FROM channel WHERE channel.name = """ chName """;"
+		If !base.Query(SQL, RecordSet)
+			this.__exceptionSQLite()
+		RecordSet.Next(Row)
+		pk := Row[1]
+			
+		if (this._debug) ; _DBG_
+			OutputDebug % "<[" A_ThisFunc "(chName=" chName ")] -> pk=" pk ; _DBG_
+		
+		return pk
+	}
+
+	
 	; ##################### private methods ##############################################################################
 	__exceptionSQLite() {
 		throw, { what: " ClipjumpDB SQLite Error", message:  base.ErrorMsg, extra: base.ErrorCode, file: A_LineFile, line: A_LineNumber }
