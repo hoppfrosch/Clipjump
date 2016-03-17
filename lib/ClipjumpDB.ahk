@@ -22,7 +22,7 @@ class ClipjumpDB extends SQLiteDB {
 	Authors:
 	<hoppfrosch at hoppfrosch@gmx.de>: Original
 */	
-	_version := "0.1.1"
+	_version := "0.2.0"
 	_debug := 0
 	_filename := ""
 
@@ -77,12 +77,12 @@ class ClipjumpDB extends SQLiteDB {
 
 	; ##################### public methods ##############################################################################
 	/*!
-		getChannelByName: (chName)
-			Gets the Channel PK by name - if the given channel does not exist, create a new one.
+		channelByName: (chName)
+			Gets the Channel PK by name - if the given name does not exist, create a new channel with given name.
 		Parameters:
 			chName - Name of the channel
 	*/
-	getChannelByName(chName) {
+	channelByName(chName) {
 		if (this._debug) ; _DBG_
 			OutputDebug % ">[" A_ThisFunc "(chName=" chName ")]" ; _DBG_
 
