@@ -201,7 +201,7 @@ class ClipjumpDB extends SQLiteDB {
 		SQL := "CREATE TABLE Clip ("
 		 . "id INTEGER PRIMARY KEY AUTOINCREMENT,"
 		 . "data TEXT        NOT NULL,"
-		 . "sha1 TEXT UNIQUE NOT NULL"
+		 . "sha256 TEXT UNIQUE NOT NULL"
 		 . ");"
 		If !base.Exec(SQL)
 			this.__exceptionSQLite()
