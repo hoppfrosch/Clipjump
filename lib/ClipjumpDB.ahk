@@ -10,8 +10,12 @@
 	This program is free software. It comes without any warranty, to the extent permitted by applicable law. You can redistribute it and/or modify it under the terms of the Do What The Fuck You Want To Public License, Version 2, as published by Sam Hocevar. See <WTFPL at http://www.wtfpl.net/> for more details.
 
 */
+
+#include %A_LineFile%\..
+#include SHA-256.ahk
 #include %A_LineFile%\..\SQLiteDB
 #include Class_SQLiteDB.ahk
+
 
 class ClipjumpDB extends SQLiteDB {
 ; ******************************************************************************************************************************************
@@ -74,7 +78,7 @@ class ClipjumpDB extends SQLiteDB {
 			return this.base.Version
 		}
 	}
-
+	
 	; ##################### public methods ##############################################################################
 	/*!
 		channelByName: (chName)
@@ -111,6 +115,43 @@ class ClipjumpDB extends SQLiteDB {
 		return pk
 	}
 
+	/*!
+		clipByContent: (clContent)
+			Gets a Clip from DB by clip-content - if no clip with the given content exists, a new clip is created in DB
+		Parameters:
+			clContent: content of the clip
+	*/
+	clipByContent(clContent) {
+		if (this._debug) ; _DBG_
+			OutputDebug % ">[" A_ThisFunc "(clContent=" clContent ")]" ; _DBG_
+
+		; Determine Checksum from content
+		checksum := SHA256(clContent)
+
+		SQL := "SELECT * FROM clip WHERE clip.sha256 = """ checksum """;"
+		If !base.Query(SQL, RecordSet)
+			this.__exceptionSQLite()
+		
+		if(!RecordSet.HasRows) {
+			if (this._debug) ; _DBG_
+			OutputDebug % "  [" A_ThisFunc "(clContent=" clContent ")]: Create new clip" ; _DBG_
+			SQL := "INSERT INTO Clip (data, sha256) VALUES ('" clContent "','" checksum "');"
+			ret := base.Exec(SQL)
+			If !ret
+				this.__exceptionSQLite()
+		}
+		
+		SQL := "SELECT * FROM clip WHERE clip.sha256 = """ checksum """;"
+		If !base.Query(SQL, RecordSet)
+			this.__exceptionSQLite()
+		RecordSet.Next(Row)
+		pk := Row[1]
+			
+		if (this._debug) ; _DBG_
+			OutputDebug % "<[" A_ThisFunc "(clContent=" clContent ")] -> pk=" pk ; _DBG_
+		
+		return pk
+	}
 	
 	; ##################### private methods ##############################################################################
 	__exceptionSQLite() {
