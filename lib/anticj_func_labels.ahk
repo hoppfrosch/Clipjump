@@ -515,6 +515,13 @@ hkZ(HotKey, Label, Status=1) {
 	}
 }
 
+/**
+ * hkz that prepends pstIdentfier
+ */
+hkZ_pi(key, label, status=1){
+	return hkZ(pstIdentifier key, label, status)
+}
+
 ; Converts an Ini file to an object
 Ini2Obj(Ini){
 	out := {}
@@ -662,6 +669,13 @@ fillwithSpaces(text="", limit=35){
 	loop % limit-Strlen(text)
 		r .= A_space
 	return text r
+}
+
+/**
+ * TickCount in 64 bit precision
+ */
+TickCount64(){
+	return DllCall("GetTickCount64", "Cdecl UInt64")
 }
 
 /*
