@@ -85,6 +85,47 @@ class ClipjumpDB extends SQLiteDB {
 	
 	; ##################### public methods ##############################################################################
 	/*!
+		adds a clip (by PK) to a channel (by PK): (pkCl, pkCh, bShouldUpdateExisting)
+			A clip, given by PK, is added to a channel, given byPK
+		Parameters:
+			pkCl - Primary key of clip
+			pkCh - Primary key of channel
+			bShouldUpdateExisting - Flag to update the entry in table Clip2Channel, if the entry already exists
+	*/
+	addClipPKToChannelPK(pkCl, pkCh, bShouldUpdateExisting := 0) {
+		bSuccess := 0
+		if (this._debug) ; _DBG_
+			OutputDebug % ">[" A_ThisFunc "(pkCl=" pkCl ", pkCh=" pkCh ", bShouldUpdateExisting=" bShouldUpdateExisting ")]" ; _DBG_
+
+		; Check whether the clip already is member of the channel
+		SQL := "SELECT * FROM clip2channel WHERE clip2channel.fk_clip = " pkCl " AND clip2channel.fk_channel = " pkCh ";"
+		If !base.Query(SQL, RecordSet)
+			this.__exceptionSQLite()
+			
+		if(!RecordSet.HasRows) {
+		; Clip IS NOT member of the channel -> create a new entry in Table Clip2Channel
+			SQL := "INSERT INTO clip2channel (fk_clip, fk_channel, date) VALUES(" pkCl "," pkCh ",""" A_Now*1000+A_Msec """);"
+			If !base.Exec(SQL)
+					this.__exceptionSQLite()
+			bSuccess := 1
+		} else {
+		; Clip IS member of the channel -> update the existing entry in Table Clip2Channel or leave it untouched (dependent on options)
+			RecordSet.Next(Row)
+			pk := Row[1]
+			if (bShouldUpdateExisting == 1) {
+				SQL := "UPDATE clip2channel SET clip2channel.date = """ A_Now*1000+A_Msec """ WHERE clip2channel.id = """ pk """;"
+				If !base.Exec(SQL)
+					this.__exceptionSQLite()
+				bSuccess := 1
+			}
+		}
+		if (this._debug) ; _DBG_
+			OutputDebug % ">[" A_ThisFunc "(pkCl=" pkCl ", pkCh= " pkCh ", bShouldUpdateExisting=" bShouldUpdateExisting ")] => " bSucess ; _DBG
+
+		return bSuccess
+	}
+	
+	/*!
 		channelByName: (chName)
 			Gets the Channel PK by name - if the given name does not exist, create a new channel with given name.
 		Parameters:
@@ -150,7 +191,10 @@ class ClipjumpDB extends SQLiteDB {
 			this.__exceptionSQLite()
 		RecordSet.Next(Row)
 		pk := Row[1]
-			
+
+		this.addClipPKToChannelPK(pk, this.idChArchive)
+		this.addClipPKToChannelPK(pk, this.idChCurrent)
+		
 		if (this._debug) ; _DBG_
 			OutputDebug % "<[" A_ThisFunc "(clContent=" clContent ")] -> pk=" pk ; _DBG_
 		
