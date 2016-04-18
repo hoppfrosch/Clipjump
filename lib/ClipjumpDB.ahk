@@ -26,9 +26,13 @@ class ClipjumpDB extends SQLiteDB {
 	Authors:
 	<hoppfrosch at hoppfrosch@gmx.de>: Original
 */	
-	_version := "0.2.0"
+	_version := "0.3.0-#1.1"
 	_debug := 0
 	_filename := ""
+	_chArchive := "Archive"
+	idChArchive := ""
+	idChDefault := ""	
+	idChCurrent := ""
 
 	; ##################### Properties (AHK >1.1.16.x) #################################################################
 	debug[] {
@@ -268,7 +272,12 @@ class ClipjumpDB extends SQLiteDB {
 		If !base.Exec(SQL)
 			this.__exceptionSQLite()
 
+		this.idChArchive := this.channelByName(this._chArchive)
+		this.idChDefault := this.channelByName("Default")
+		this.idChCurrent := this.idChDefault
+
 		if (this._debug) ; _DBG_
 			OutputDebug % "<[" A_ThisFunc "()]" ; _DBG_
-		}
+
+	}	
 }
