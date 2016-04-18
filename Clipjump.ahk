@@ -18,7 +18,7 @@
 
 ;@Ahk2Exe-SetName Clipjump
 ;@Ahk2Exe-SetDescription Clipjump
-;@Ahk2Exe-SetVersion 12.3
+;@Ahk2Exe-SetVersion 12.5
 ;@Ahk2Exe-SetCopyright Avi Aryan
 ;@Ahk2Exe-SetOrigFilename Clipjump.exe
 
@@ -45,7 +45,7 @@ PROGRAM VARIABLES
 */
 
 global PROGNAME := "Clipjump"
-global VERSION := "12.3"
+global VERSION := "12.5"
 global CONFIGURATION_FILE := "settings.ini"
 
 ini_LANG := ini_read("System", "lang")
@@ -115,12 +115,14 @@ global windows_copy_k, windows_cut_k, ini_OpenAllChbyDef := 0, pstIdentifier := 
 global CALLER_STATUS, CLIPJUMP_STATUS := 1		; global vars are not declared like the below , without initialising
 global CALLER := CALLER_STATUS := 1, IN_BACK := 0, MULTIPASTE, PASTEMODE_ACT
 global CLIP_ACTION := "", ONCLIPBOARD := 1 , ISACTIVEEXCEL := 0 , HASCOPYFAILED := 0 , ctrlRef		;specific purpose global vars
+global wasManualClipboard := false
 
 ;Global Ini declarations
 global ini_IsImageStored , ini_Quality , ini_MaxClips , ini_Threshold , ini_isMessage, CopyMessage, ini_DaysToStore
 		, Copyfolderpath_K, Copyfilepath_K, Copyfilepath_K, onetime_K, paste_k, actionmode_k, ini_is_duplicate_copied, ini_formatting
 		, ini_CopyBeep , beepFrequency , ignoreWindows, ini_defEditor, ini_defImgEditor, ini_def_Pformat, pluginManager_k, holdClip_K, ini_PreserveClipPos
 		, chOrg_K, ini_startSearch, ini_revFormat2def, ini_pstMode_X, ini_pstMode_Y, ini_HisCloseOnInstaPaste, history_K, ini_ram_flush, ini_winClipjump := 1
+		, ini_monitorClipboard := 0
 
 ;Init General vars
 is_pstMode_active := 0
@@ -130,14 +132,6 @@ is_pstMode_active := 0
 GET THE PROGRAM WORKING
 ***********************
 */
-
-global DB := new SQLiteDB()
-if (!FileExist(DBPATH))
-	isnewdb := 1
-else
-	isnewdb := 0
-if (!DB.OpenDB(DBPATH))
-	msgbox some error occured
 
 ;Setting up Icons
 FileCreateDir, icons
@@ -168,8 +162,18 @@ else if (ini_Version != VERSION)
 {
 	save_default(0) 			;0 corresponds to selective save
 	gosub Reload 		; Update plugin includes with what the user has incase he updates his Clipjump
+	sleep 10000 		; to counter race condition
 }
 
+; start history
+; migrate if needed
+global DB := new SQLiteDB()
+if (!FileExist(DBPATH))
+	isnewdb := 1
+else
+	isnewdb := 0
+if (!DB.OpenDB(DBPATH))
+	msgbox some error occured
 
 /*
 ***********************
@@ -257,7 +261,7 @@ if FileExist(GHICON_PATH)
 else
 	MsgBox, 16, % PROGNAME, % valueof(TXT.ABT_errorFontIcon)
 
-if (isnewdb){
+if (isnewdb == 1){
 	migrateHistory()
 }
 
@@ -410,6 +414,16 @@ onClipboardChange:
 	if (timeDiff < 200){
 		return
 	}
+	; check monitor clipboard setting
+	if (ini_monitorClipboard == 0) {
+		if (wasManualClipboard == false){
+			return
+		} else {
+			wasManualClipboard := false
+			setTimer, manualClipboardTimer, Off
+		}
+	}
+	; ignore windows
 	ifwinactive, ahk_group IgnoreGroup
 		return
 
@@ -633,6 +647,8 @@ nativeCopy:
 	if ini_is_duplicate_copied
 		LASTCLIP := ""
 	CLIP_ACTION := "COPY"
+	wasManualClipboard := true
+	setTimer, manualClipboardTimer, -1000
 	Send, ^{vk43}
 	return
 
@@ -648,6 +664,8 @@ nativeCut:
 	if ini_is_duplicate_copied
 		LASTCLIP := ""
 	CLIP_ACTION := "CUT"
+	wasManualClipboard := true
+	setTimer, manualClipboardTimer, -1000
 	Send, ^{vk58}
 	return
 
@@ -658,6 +676,10 @@ ctrlForCopy:
 		copyCutShortcuts()	; keyblocker is removed bcoz ^x and ^c overwrites it
 		SetTimer, ctrlforCopy, Off
 	}
+	return
+
+manualClipboardTimer:
+	wasManualClipboard := false
 	return
 
 Formatting:
@@ -1293,6 +1315,8 @@ update_actionmode(){
 	. "`n"
 	ACTIONMODE.remove("text") , ACTIONMODE.remove("keys")
 
+	thetext .= "`n" fillWithSpaces(TXT.ACT_switchChannel, 25) " -  " "0..9"
+
 	for k,v in ACTIONMODE
 	if !Instr(k, "_") && (k != "Esc") && v{
 		thekeys .= k " "
@@ -1359,7 +1383,7 @@ hlp:
 	if A_IsCompiled or H_Compiled
 		run Clipjump.chm
 	else
-		run % FileExist("Clipjump.chm") ? "Clipjump.chm" : "chm_files\docs\index.html"
+		run % FileExist("Clipjump.chm") ? "Clipjump.chm" : "website\_site\index.html"
 	return
 
 strtup:
@@ -1579,7 +1603,10 @@ disable_clipjump:
 
 routines_Exit() {
 	Ini_write("Clipboard_history_window", "partial", history_partial, 0)
-	DB.CloseDb()
+	if IsObject(DB){
+		DB.CloseDb()
+		DB := ""
+	}
 	Prefs2Ini()
 	updatePluginIncludes()
 	DllCall( "GDI32.DLL\RemoveFontResourceEx",Str, GHICON_PATH,UInt,(FR_PRIVATE:=0x10),Int,0)
