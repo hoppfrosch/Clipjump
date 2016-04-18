@@ -263,7 +263,7 @@ class ClipjumpDB extends SQLiteDB {
 		 . "  fk_clip REFERENCES clip(id),"
 		 . "  fk_channel REFERENCES channel(id),"
 		 . "  date INTEGER,"
-		 . "  order_number, INTEGER"
+		 . "  order_number INTEGER"
 		 . ");"
 		If !base.Exec(SQL)
 			this.__exceptionSQLite()
