@@ -8,25 +8,28 @@
 
 try  ; Attempts to execute code.
 {
-	DB := new ClipjumpDB(A_ScriptDir . "\clipjump.db",0,1)
+	DB := new ClipjumpDB(A_ScriptDir . "\clipjump.db",1,1)
 
 	Version := DB.Ver . " (SQLite: " . DB.Ver_sqlite . ")"
 	OutputDebug % "Version:" . Version . "`nFilename:" . DB.filename
 
 
-	x := DB.channelByName("test1")
-	x := DB.channelByName("test2")
-	x := DB.channelByName("test3")
+	x1 := DB.channelByName("test1")
+	x2 := DB.channelByName("test2")
+	x3 := DB.channelByName("test3")
 
 	y1a := DB.clipByContent("Eins")
 	y2a := DB.clipByContent("Zwei")
 	y1b := DB.clipByContent("Eins")
+
+	bSuccess := DB.addClipToChannelPK("test4", x3)
 	OutputDebug % y1a " - " y2a " - " y1b
 	
 }
 catch e  ; Handles the first error/exception raised by the block above.
 {
-    MsgBox, 16, % "Exception thrown!`n`nwhat: " e.what "`nfile: " e.file "`nline: " e.line "`nmessage: " e.message "`nextra: " e.extra
+	contents := "what: " e.what "`nfile: " e.file "`nline: " e.line "`nmessage: " e.message "`nextra: " e.extra
+    MsgBox, 16, % "Exception!", % contents 
     Exit
 }
 
