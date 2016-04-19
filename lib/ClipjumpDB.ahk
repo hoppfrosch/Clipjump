@@ -26,7 +26,7 @@ class ClipjumpDB extends SQLiteDB {
 	Authors:
 	<hoppfrosch at hoppfrosch@gmx.de>: Original
 */	
-	_version := "0.3.0-#1.1"
+	_version := "0.3.0-#1.2" ; Versioning according SemVer http://semver.org/
 	_debug := 0
 	_filename := ""
 	_chArchive := "Archive"
@@ -100,13 +100,13 @@ class ClipjumpDB extends SQLiteDB {
 		; Check whether the clip already is member of the channel
 		SQL := "SELECT * FROM clip2channel WHERE clip2channel.fk_clip = " pkCl " AND clip2channel.fk_channel = " pkCh ";"
 		If !base.Query(SQL, RecordSet)
-			this.__exceptionSQLite()
+			throw, { what: " ClipjumpDB SQLite Error", message:  base.ErrorMsg, extra: base.ErrorCode, file: A_LineFile, line: A_LineNumber }
 			
 		if(!RecordSet.HasRows) {
 		; Clip IS NOT member of the channel -> create a new entry in Table Clip2Channel
 			SQL := "INSERT INTO clip2channel (fk_clip, fk_channel, date) VALUES(" pkCl "," pkCh ",""" A_Now*1000+A_Msec """);"
 			If !base.Exec(SQL)
-					this.__exceptionSQLite()
+					throw, { what: " ClipjumpDB SQLite Error", message:  base.ErrorMsg, extra: base.ErrorCode, file: A_LineFile, line: A_LineNumber }
 			bSuccess := 1
 		} else {
 		; Clip IS member of the channel -> update the existing entry in Table Clip2Channel or leave it untouched (dependent on options)
@@ -115,7 +115,7 @@ class ClipjumpDB extends SQLiteDB {
 			if (bShouldUpdateExisting == 1) {
 				SQL := "UPDATE clip2channel SET clip2channel.date = """ A_Now*1000+A_Msec """ WHERE clip2channel.id = """ pk """;"
 				If !base.Exec(SQL)
-					this.__exceptionSQLite()
+					throw, { what: " ClipjumpDB SQLite Error", message:  base.ErrorMsg, extra: base.ErrorCode, file: A_LineFile, line: A_LineNumber }
 				bSuccess := 1
 			}
 		}
@@ -159,7 +159,7 @@ class ClipjumpDB extends SQLiteDB {
 
 		SQL := "SELECT * FROM channel WHERE channel.name = """ chName """;"
 		If !base.Query(SQL, RecordSet)
-			this.__exceptionSQLite()
+			throw, { what: " ClipjumpDB SQLite Error", message:  base.ErrorMsg, extra: base.ErrorCode, file: A_LineFile, line: A_LineNumber }
 		
 		if(!RecordSet.HasRows) {
 			if (this._debug) ; _DBG_
@@ -167,12 +167,12 @@ class ClipjumpDB extends SQLiteDB {
 			SQL := "INSERT INTO Channel (name) VALUES ('" chName "');"
 			ret := base.Exec(SQL)
 			If !ret
-				this.__exceptionSQLite()
+				throw, { what: " ClipjumpDB SQLite Error", message:  base.ErrorMsg, extra: base.ErrorCode, file: A_LineFile, line: A_LineNumber }
 		}
 		
 		SQL := "SELECT * FROM channel WHERE channel.name = """ chName """;"
 		If !base.Query(SQL, RecordSet)
-			this.__exceptionSQLite()
+			throw, { what: " ClipjumpDB SQLite Error", message:  base.ErrorMsg, extra: base.ErrorCode, file: A_LineFile, line: A_LineNumber }
 		RecordSet.Next(Row)
 		pk := Row[1]
 			
@@ -200,7 +200,7 @@ class ClipjumpDB extends SQLiteDB {
 
 		SQL := "SELECT * FROM clip WHERE clip.sha256 = """ checksum """;"
 		If !base.Query(SQL, RecordSet)
-			this.__exceptionSQLite()
+			throw, { what: " ClipjumpDB SQLite Error", message:  base.ErrorMsg, extra: base.ErrorCode, file: A_LineFile, line: A_LineNumber }
 		
 		if(!RecordSet.HasRows) {
 			if (this._debug) ; _DBG_
@@ -208,12 +208,12 @@ class ClipjumpDB extends SQLiteDB {
 			SQL := "INSERT INTO Clip (data, sha256) VALUES ('" clContent "','" checksum "');"
 			ret := base.Exec(SQL)
 			If !ret
-				this.__exceptionSQLite()
+				throw, { what: " ClipjumpDB SQLite Error", message:  base.ErrorMsg, extra: base.ErrorCode, file: A_LineFile, line: A_LineNumber }
 		}
 		
 		SQL := "SELECT * FROM clip WHERE clip.sha256 = """ checksum """;"
 		If !base.Query(SQL, RecordSet)
-			this.__exceptionSQLite()
+			throw, { what: " ClipjumpDB SQLite Error", message:  base.ErrorMsg, extra: base.ErrorCode, file: A_LineFile, line: A_LineNumber }
 		RecordSet.Next(Row)
 		pk := Row[1]
 
@@ -228,9 +228,6 @@ class ClipjumpDB extends SQLiteDB {
 	}
 	
 	; ##################### private methods ##############################################################################
-	__exceptionSQLite() {
-		throw, { what: " ClipjumpDB SQLite Error", message:  base.ErrorMsg, extra: base.ErrorCode, file: A_LineFile, line: A_LineNumber }
-	}
 	
 	/*!
 		Constructor: (filename := A_ScriptDir . "/clipjump.db", overwriteExisting := 0)
@@ -273,7 +270,7 @@ class ClipjumpDB extends SQLiteDB {
 		
 		; Open existing or create new database
 		If !base.OpenDB(filename) {
-			this.__exceptionSQLite()
+			throw, { what: " ClipjumpDB SQLite Error", message:  base.ErrorMsg, extra: base.ErrorCode, file: A_LineFile, line: A_LineNumber }
 		}
 
 		; Initialize the database if database file if the flag is set
@@ -292,7 +289,7 @@ class ClipjumpDB extends SQLiteDB {
 		if (this._debug) ; _DBG_
 			OutputDebug % ">[" A_ThisFunc "()]" ; _DBG_
 		If !base.CloseDB() {
-			this.__exceptionSQLite()
+			throw, { what: " ClipjumpDB SQLite Error", message:  base.ErrorMsg, extra: base.ErrorCode, file: A_LineFile, line: A_LineNumber }
 		}
 		if (this._debug) ; _DBG_
 			OutputDebug % "<[" A_ThisFunc "()]" ; _DBG_
@@ -309,7 +306,7 @@ class ClipjumpDB extends SQLiteDB {
 		; Enable foreign key support: http://www.sqlite.org/foreignkeys.html#fk_enable
 		SQL := "PRAGMA foreign_keys=ON;"
 		If !base.Exec(SQL)
-			this.__exceptionSQLite()
+			throw, { what: " ClipjumpDB SQLite Error", message:  base.ErrorMsg, extra: base.ErrorCode, file: A_LineFile, line: A_LineNumber }
 
 		; ------------------------------------------------------------------------------------------------------------
 		; Table Clip
@@ -319,7 +316,7 @@ class ClipjumpDB extends SQLiteDB {
 		 . "sha256 TEXT UNIQUE NOT NULL"
 		 . ");"
 		If !base.Exec(SQL)
-			this.__exceptionSQLite()
+			throw, { what: " ClipjumpDB SQLite Error", message:  base.ErrorMsg, extra: base.ErrorCode, file: A_LineFile, line: A_LineNumber }
 
 		; ------------------------------------------------------------------------------------------------------------
 		; Table Channel
@@ -328,7 +325,7 @@ class ClipjumpDB extends SQLiteDB {
 		 . "name TEXT    UNIQUE      NOT NULL"
 		 . ");"
 		If !base.Exec(SQL)
-			this.__exceptionSQLite()
+			throw, { what: " ClipjumpDB SQLite Error", message:  base.ErrorMsg, extra: base.ErrorCode, file: A_LineFile, line: A_LineNumber }
 
 		; ------------------------------------------------------------------------------------------------------------
 		; Table Clip2Channel
@@ -340,7 +337,7 @@ class ClipjumpDB extends SQLiteDB {
 		 . "  order_number INTEGER"
 		 . ");"
 		If !base.Exec(SQL)
-			this.__exceptionSQLite()
+			throw, { what: " ClipjumpDB SQLite Error", message:  base.ErrorMsg, extra: base.ErrorCode, file: A_LineFile, line: A_LineNumber }
 
 		this.idChArchive := this.channelByName(this._chArchive)
 		this.idChDefault := this.channelByName("Default")
