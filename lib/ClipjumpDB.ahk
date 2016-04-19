@@ -126,6 +126,28 @@ class ClipjumpDB extends SQLiteDB {
 	}
 	
 	/*!
+		adds a clip to a channel (by PK): (pkCl, pkCh, bShouldUpdateExisting)
+			A clip is added to a channel, given byPK
+		Parameters:
+			clContent - Content of the clip
+			pkCh - Primary key of channel
+			bShouldUpdateExisting - Flag to update the entry in table Clip2Channel, if the entry already exists
+	*/
+	addClipToChannelPK(clContent, pkCh, bShouldUpdateExisting := 0) {
+		bSuccess := 0
+		if (this._debug) ; _DBG_
+			OutputDebug % ">[" A_ThisFunc "(clContent=" clContent ", pkCh=" pkCh ", bShouldUpdateExisting=" bShouldUpdateExisting ")]" ; _DBG_
+
+		pkCl := this.clipByContent(clContent, 0) ; Create or search clip and don't add Clip to current channel 
+		bSuccess := this.addClipPKToChannelPK(pkCl, pkCh, bShouldUpdateExisting) ; Add clip to given channel
+		
+		if (this._debug) ; _DBG_
+			OutputDebug % ">[" A_ThisFunc "(clContent=" clContent ", pkCh= " pkCh ", bShouldUpdateExisting=" bShouldUpdateExisting ")] => " bSucess ; _DBG
+
+		return bSuccess
+	}
+	
+	/*!
 		channelByName: (chName)
 			Gets the Channel PK by name - if the given name does not exist, create a new channel with given name.
 		Parameters:
@@ -161,12 +183,15 @@ class ClipjumpDB extends SQLiteDB {
 	}
 
 	/*!
-		clipByContent: (clContent)
+		clipByContent: (clContent, bAddToChCurrent)
 			Gets a Clip from DB by clip-content - if no clip with the given content exists, a new clip is created in DB
+			The new clip is added automatically to Archive-Channel and optionally to current Channel
 		Parameters:
 			clContent: content of the clip
+			bAddToChCurrent: Flag to select whether clip is added to current channel
+			
 	*/
-	clipByContent(clContent) {
+	clipByContent(clContent, bAddToChCurrent := 1) {
 		if (this._debug) ; _DBG_
 			OutputDebug % ">[" A_ThisFunc "(clContent=" clContent ")]" ; _DBG_
 
@@ -193,7 +218,8 @@ class ClipjumpDB extends SQLiteDB {
 		pk := Row[1]
 
 		this.addClipPKToChannelPK(pk, this.idChArchive)
-		this.addClipPKToChannelPK(pk, this.idChCurrent)
+		if (bAddToChCurrent == 1)
+			this.addClipPKToChannelPK(pk, this.idChCurrent)
 		
 		if (this._debug) ; _DBG_
 			OutputDebug % "<[" A_ThisFunc "(clContent=" clContent ")] -> pk=" pk ; _DBG_
@@ -310,7 +336,7 @@ class ClipjumpDB extends SQLiteDB {
 		 . "  id INTEGER PRIMARY KEY AUTOINCREMENT,"
 		 . "  fk_clip REFERENCES clip(id),"
 		 . "  fk_channel REFERENCES channel(id),"
-		 . "  date INTEGER,"
+		 . "  date INTEGER UNIQUE NOT NULL,"
 		 . "  order_number INTEGER"
 		 . ");"
 		If !base.Exec(SQL)
