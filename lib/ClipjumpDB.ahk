@@ -26,7 +26,10 @@ class ClipjumpDB extends SQLiteDB {
 	Authors:
 	<hoppfrosch at hoppfrosch@gmx.de>: Original
 */	
-	_version := "0.4.0" ; Versioning according SemVer http://semver.org/
+    ; Versioning according SemVer http://semver.org/
+	_version_class := "0.4.1" ; Version of class implementation
+	; Simple incrementing version
+	_version := 1 ; version of the database scheme
 	_debug := 0
 	_filename := ""
 	_chArchive := "Archive"
@@ -66,11 +69,30 @@ class ClipjumpDB extends SQLiteDB {
 	}
 	ver[] {
 	/* ------------------------------------------------------------------------------- 
+	Property: ver [get/set]
+	Version of the database
+	*/
+		get {
+			SQL := "PRAGMA user_version;"
+			If !base.GetTable(SQL, TB)
+				throw, { what: " ClipjumpDB SQLite Error", message:  base.ErrorMsg, extra: base.ErrorCode, file: A_LineFile, line: A_LineNumber }
+			ver := TB.Rows[1][1]
+			return ver
+		}
+		set {
+			SQL := "PRAGMA user_version=""" value """;"
+			If !base.Exec(SQL)
+				throw, { what: " ClipjumpDB SQLite Error", message:  base.ErrorMsg, extra: base.ErrorCode, file: A_LineFile, line: A_LineNumber }
+			return value
+		}
+	}
+	ver_class[] {
+	/* ------------------------------------------------------------------------------- 
 	Property: ver [get]
 	Get the version of the class implementation
 	*/
 		get {
-			return this._version
+			return this._version_class
 		}
 	}
 	ver_sqlite[] {
@@ -292,6 +314,9 @@ class ClipjumpDB extends SQLiteDB {
 			this.__InitDB()
 		}
 
+		; Migrate DB to newer version if needed 
+		this.__migrateDB()
+		
 		if (this._debug) ; _DBG_
 			OutputDebug % "<[" A_ThisFunc "(filename=" filename ", overwriteExisting =" overwriteExisting ")] (version: " this._version ")" ; _DBG_
 	}
@@ -352,7 +377,7 @@ class ClipjumpDB extends SQLiteDB {
 		 . ");"
 		If !base.Exec(SQL)
 			throw, { what: " ClipjumpDB SQLite Error", message:  base.ErrorMsg, extra: base.ErrorCode, file: A_LineFile, line: A_LineNumber }
-
+				
 		this.idChArchive := this.channelByName(this._chArchive)
 		this.idChDefault := this.channelByName("Default")
 		this.idChCurrent := this.idChDefault
@@ -360,4 +385,24 @@ class ClipjumpDB extends SQLiteDB {
 		if (this._debug) ; _DBG_
 			OutputDebug % "<[" A_ThisFunc "()]" ; _DBG_
 	}	
+
+	__migrateDB() {
+		if (this._version > this.ver) { ; DB version supported with this implementation is NEWER than the given Database -> Migration
+			; Migration is performed incrementally 0 -> 1 -> 2 -> 3 ....
+			if (this.ver == 0)
+				this.__migrate_0() ; Migrate to dbversion 1
+
+			;if (this.ver == 1)
+			;	this.__migrate_1() ; Migrate to dbversion 2
+							
+		} else if (this._version < this.ver) {
+			throw, { what: " ClipjumpDB Error", message: "Database cannot be downgraded" , extra: "-1", file: A_LineFile, line: A_LineNumber }
+		}
+	}
+
+	__migrate_0() {
+		; ToDo implement the migration from DB from clipjump 12.7 (user_version == 0) to user_version 1 ...
+		
+		this.ver := 1
+	}
 }

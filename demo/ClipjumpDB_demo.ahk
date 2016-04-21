@@ -10,7 +10,7 @@ try  ; Attempts to execute code.
 {
 	DB := new ClipjumpDB(A_ScriptDir . "\clipjump.db",1,1)
 
-	Version := DB.Ver . " (SQLite: " . DB.Ver_sqlite . ")"
+	Version := DB.Ver . " - SQLite: " . DB.Ver_sqlite . " - Implementation: " DB.Ver_class
 	OutputDebug % "Version:" . Version . "`nFilename:" . DB.filename
 
 
