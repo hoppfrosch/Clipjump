@@ -27,7 +27,7 @@ class ClipjumpDB extends SQLiteDB {
 	<hoppfrosch at hoppfrosch@gmx.de>: Original
 */	
     ; Versioning according SemVer http://semver.org/
-	_version_class := "0.4.1-#5-2" ; Version of class implementation
+	_version_class := "0.4.1-#5-3" ; Version of class implementation
 	; Simple incrementing version
 	_version := 1 ; version of the database scheme
 	_debug := 0
@@ -314,11 +314,9 @@ class ClipjumpDB extends SQLiteDB {
 			this.__InitDB()
 		}
 
-		if (this._version > this.ver) { ; DB version supported with this implementation is NEWER than the given Database
-			throw, { what: " ClipjumpDB Error", message: "Database version mismatch" , extra: "-1", file: A_LineFile, line: A_LineNumber }
-			; Todo: migrate the database
-		}
-
+		; Migrate DB to newer version if needed 
+		this.__migrateDB()
+		
 		if (this._debug) ; _DBG_
 			OutputDebug % "<[" A_ThisFunc "(filename=" filename ", overwriteExisting =" overwriteExisting ")] (version: " this._version ")" ; _DBG_
 	}
@@ -387,4 +385,24 @@ class ClipjumpDB extends SQLiteDB {
 		if (this._debug) ; _DBG_
 			OutputDebug % "<[" A_ThisFunc "()]" ; _DBG_
 	}	
+
+	__migrateDB() {
+		if (this._version > this.ver) { ; DB version supported with this implementation is NEWER than the given Database -> Migration
+			; Migration is performed incrementally 0 -> 1 -> 2 -> 3 ....
+			if (this.ver == 0)
+				this.__migrate_0() ; Migrate to dbversion 1
+
+			;if (this.ver == 1)
+			;	this.__migrate_1() ; Migrate to dbversion 2
+							
+		} else if (this._version < this.ver) {
+			throw, { what: " ClipjumpDB Error", message: "Database cannot be downgraded" , extra: "-1", file: A_LineFile, line: A_LineNumber }
+		}
+	}
+
+	__migrate_0() {
+		; ToDo implement the migration from DB from clipjump 12.7 (user_version == 0) to user_version 1 ...
+		
+		this.ver := 1
+	}
 }
