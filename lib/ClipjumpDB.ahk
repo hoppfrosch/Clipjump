@@ -27,7 +27,7 @@ class ClipjumpDB extends SQLiteDB {
 	<hoppfrosch at hoppfrosch@gmx.de>: Original
 */	
     ; Versioning according SemVer http://semver.org/
-	_version_class := "0.4.2-#3.2" ; Version of class implementation
+	_version_class := "0.4.2-#3.3" ; Version of class implementation
 	; Simple incrementing version
 	_version := 1 ; version of the database scheme
 	_debug := 0
@@ -353,7 +353,9 @@ class ClipjumpDB extends SQLiteDB {
 		 . "id INTEGER PRIMARY KEY AUTOINCREMENT,"
 		 . "sha256 TEXT UNIQUE NOT NULL,"
 		 . "data TEXT NOT NULL,"
-		 . "type INTEGER DEFAULT 0"
+		 . "type INTEGER DEFAULT 0,"
+		 . "fileid TEXT,"
+		 . "size INTEGER"
 		 . ");"
 		If !base.Exec(SQL)
 			throw, { what: " ClipjumpDB SQLite Error", message:  base.ErrorMsg, extra: base.ErrorCode, file: A_LineFile, line: A_LineNumber }
