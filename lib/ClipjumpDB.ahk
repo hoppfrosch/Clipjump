@@ -26,7 +26,9 @@ class ClipjumpDB extends SQLiteDB {
 	Authors:
 	<hoppfrosch at hoppfrosch@gmx.de>: Original
 */	
-	_version := "0.4.0" ; Versioning according SemVer http://semver.org/
+    ; Versioning according SemVer http://semver.org/
+	_version_class := "0.4.1-#5-1" ; Version of class implementation
+	_version := "2.0.0" ; version of the database scheme
 	_debug := 0
 	_filename := ""
 	_chArchive := "Archive"
@@ -67,10 +69,23 @@ class ClipjumpDB extends SQLiteDB {
 	ver[] {
 	/* ------------------------------------------------------------------------------- 
 	Property: ver [get]
+	Get the version of the database
+	*/
+		get {
+			SQL := "PRAGMA user_version"
+			If !base.GetTable(SQL, TB)
+				throw, { what: " ClipjumpDB SQLite Error", message:  base.ErrorMsg, extra: base.ErrorCode, file: A_LineFile, line: A_LineNumber }
+			ver := TB.Rows[1][1]
+			return ver
+		}
+	}
+	ver_class[] {
+	/* ------------------------------------------------------------------------------- 
+	Property: ver [get]
 	Get the version of the class implementation
 	*/
 		get {
-			return this._version
+			return this._version_class
 		}
 	}
 	ver_sqlite[] {
@@ -292,6 +307,11 @@ class ClipjumpDB extends SQLiteDB {
 			this.__InitDB()
 		}
 
+		if (this._version > this.ver) { ; DB version supported with this implementation is NEWER than the given Database
+			throw, { what: " ClipjumpDB Error", message: "Database version mismatch" , extra: "-1", file: A_LineFile, line: A_LineNumber }
+			; Todo: migrate the database
+		}
+
 		if (this._debug) ; _DBG_
 			OutputDebug % "<[" A_ThisFunc "(filename=" filename ", overwriteExisting =" overwriteExisting ")] (version: " this._version ")" ; _DBG_
 	}
@@ -352,7 +372,7 @@ class ClipjumpDB extends SQLiteDB {
 		 . ");"
 		If !base.Exec(SQL)
 			throw, { what: " ClipjumpDB SQLite Error", message:  base.ErrorMsg, extra: base.ErrorCode, file: A_LineFile, line: A_LineNumber }
-
+				
 		this.idChArchive := this.channelByName(this._chArchive)
 		this.idChDefault := this.channelByName("Default")
 		this.idChCurrent := this.idChDefault
