@@ -26,7 +26,7 @@ class ClipjumpDB extends SQLiteDB {
 	Authors:
 	<hoppfrosch at hoppfrosch@gmx.de>: Original
 */	
-	_version := "0.3.0-#1.2" ; Versioning according SemVer http://semver.org/
+	_version := "0.4.0" ; Versioning according SemVer http://semver.org/
 	_debug := 0
 	_filename := ""
 	_chArchive := "Archive"
@@ -104,7 +104,7 @@ class ClipjumpDB extends SQLiteDB {
 			
 		if(!RecordSet.HasRows) {
 		; Clip IS NOT member of the channel -> create a new entry in Table Clip2Channel
-			SQL := "INSERT INTO clip2channel (fk_clip, fk_channel, date) VALUES(" pkCl "," pkCh ",""" A_Now*1000+A_Msec """);"
+			SQL := "INSERT INTO clip2channel (fk_clip, fk_channel, date) VALUES(" pkCl "," pkCh ",""" this.timestamp() """);"
 			If !base.Exec(SQL)
 					throw, { what: " ClipjumpDB SQLite Error", message:  base.ErrorMsg, extra: base.ErrorCode, file: A_LineFile, line: A_LineNumber }
 			bSuccess := 1
@@ -113,7 +113,7 @@ class ClipjumpDB extends SQLiteDB {
 			RecordSet.Next(Row)
 			pk := Row[1]
 			if (bShouldUpdateExisting == 1) {
-				SQL := "UPDATE clip2channel SET clip2channel.date = """ A_Now*1000+A_Msec """ WHERE clip2channel.id = """ pk """;"
+				SQL := "UPDATE clip2channel SET clip2channel.date = """ this.timestamp() """ WHERE clip2channel.id = """ pk """;"
 				If !base.Exec(SQL)
 					throw, { what: " ClipjumpDB SQLite Error", message:  base.ErrorMsg, extra: base.ErrorCode, file: A_LineFile, line: A_LineNumber }
 				bSuccess := 1
@@ -226,6 +226,20 @@ class ClipjumpDB extends SQLiteDB {
 		
 		return pk
 	}
+
+	/*!
+		timestamp: 
+			Converts AHK timestamp YYYYMMDDHHMMSSmmm to more human readable timestamp YYYY-MM-DD HH:MM:SS.mmm
+		Parameters:
+			t - AHK-timestamp (format YYYYMMDDHHMMSSmmm). If t == "", A_Now*1000+A_MSec will be assumed as default
+		Return:  
+			timestamp in format YYYY-MM-DD HH:MM:SS.mmm
+	*/
+	timestamp(t:=""){
+		if (t == "") 
+			t:= A_Now*1000+A_MSec
+		return SubStr(t, 1, 4) "-" SubStr(t,5,2) "-" SubStr(t,7,2) " " SubStr(t, 9, 2) ":" SubStr(t,11,2) ":" SubStr(t,13,2) "." SubStr(t,15,3)
+	}
 	
 	; ##################### private methods ##############################################################################
 	
@@ -333,7 +347,7 @@ class ClipjumpDB extends SQLiteDB {
 		 . "  id INTEGER PRIMARY KEY AUTOINCREMENT,"
 		 . "  fk_clip REFERENCES clip(id),"
 		 . "  fk_channel REFERENCES channel(id),"
-		 . "  date INTEGER UNIQUE NOT NULL,"
+		 . "  date TEXT NOT NULL,"
 		 . "  order_number INTEGER"
 		 . ");"
 		If !base.Exec(SQL)
@@ -345,6 +359,5 @@ class ClipjumpDB extends SQLiteDB {
 
 		if (this._debug) ; _DBG_
 			OutputDebug % "<[" A_ThisFunc "()]" ; _DBG_
-
 	}	
 }
