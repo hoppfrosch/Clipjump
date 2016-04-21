@@ -27,7 +27,7 @@ class ClipjumpDB extends SQLiteDB {
 	<hoppfrosch at hoppfrosch@gmx.de>: Original
 */	
     ; Versioning according SemVer http://semver.org/
-	_version_class := "0.4.2-#3.1" ; Version of class implementation
+	_version_class := "0.4.2-#3.2" ; Version of class implementation
 	; Simple incrementing version
 	_version := 1 ; version of the database scheme
 	_debug := 0
@@ -126,7 +126,7 @@ class ClipjumpDB extends SQLiteDB {
 			
 		if(!RecordSet.HasRows) {
 		; Clip IS NOT member of the channel -> create a new entry in Table Clip2Channel
-			SQL := "INSERT INTO clip2channel (fk_clip, fk_channel, date) VALUES(" pkCl "," pkCh ",""" this.timestamp() """);"
+			SQL := "INSERT INTO clip2channel (fk_clip, fk_channel, time) VALUES(" pkCl "," pkCh ",""" this.timestamp() """);"
 			If !base.Exec(SQL)
 					throw, { what: " ClipjumpDB SQLite Error", message:  base.ErrorMsg, extra: base.ErrorCode, file: A_LineFile, line: A_LineNumber }
 			bSuccess := 1
@@ -135,7 +135,7 @@ class ClipjumpDB extends SQLiteDB {
 			RecordSet.Next(Row)
 			pk := Row[1]
 			if (bShouldUpdateExisting == 1) {
-				SQL := "UPDATE clip2channel SET clip2channel.date = """ this.timestamp() """ WHERE clip2channel.id = """ pk """;"
+				SQL := "UPDATE clip2channel SET clip2channel.time = """ this.timestamp() """ WHERE clip2channel.id = """ pk """;"
 				If !base.Exec(SQL)
 					throw, { what: " ClipjumpDB SQLite Error", message:  base.ErrorMsg, extra: base.ErrorCode, file: A_LineFile, line: A_LineNumber }
 				bSuccess := 1
@@ -373,7 +373,7 @@ class ClipjumpDB extends SQLiteDB {
 		 . "  id INTEGER PRIMARY KEY AUTOINCREMENT,"
 		 . "  fk_clip REFERENCES clip(id),"
 		 . "  fk_channel REFERENCES channel(id),"
-		 . "  date TEXT NOT NULL,"
+		 . "  time TEXT NOT NULL,"
 		 . "  order_number INTEGER"
 		 . ");"
 		If !base.Exec(SQL)
