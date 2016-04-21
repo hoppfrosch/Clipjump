@@ -27,8 +27,9 @@ class ClipjumpDB extends SQLiteDB {
 	<hoppfrosch at hoppfrosch@gmx.de>: Original
 */	
     ; Versioning according SemVer http://semver.org/
-	_version_class := "0.4.1-#5-1" ; Version of class implementation
-	_version := "2.0.0" ; version of the database scheme
+	_version_class := "0.4.1-#5-2" ; Version of class implementation
+	; Simple incrementing version
+	_version := 1 ; version of the database scheme
 	_debug := 0
 	_filename := ""
 	_chArchive := "Archive"
@@ -72,11 +73,17 @@ class ClipjumpDB extends SQLiteDB {
 	Get the version of the database
 	*/
 		get {
-			SQL := "PRAGMA user_version"
+			SQL := "PRAGMA user_version;"
 			If !base.GetTable(SQL, TB)
 				throw, { what: " ClipjumpDB SQLite Error", message:  base.ErrorMsg, extra: base.ErrorCode, file: A_LineFile, line: A_LineNumber }
 			ver := TB.Rows[1][1]
 			return ver
+		}
+		set {
+			SQL := "PRAGMA user_version=""" value """;"
+			If !base.Exec(SQL)
+				throw, { what: " ClipjumpDB SQLite Error", message:  base.ErrorMsg, extra: base.ErrorCode, file: A_LineFile, line: A_LineNumber }
+			return value
 		}
 	}
 	ver_class[] {
