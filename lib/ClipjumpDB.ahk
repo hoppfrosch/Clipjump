@@ -27,7 +27,7 @@ class ClipjumpDB extends SQLiteDB {
 	<hoppfrosch at hoppfrosch@gmx.de>: Original
 */	
     ; Versioning according SemVer http://semver.org/
-	_version_class := "0.4.2" ; Version of class implementation
+	_version_class := "0.4.3-#6-1" ; Version of class implementation
 	; Simple incrementing version
 	_version := 1 ; version of the database scheme
 	_debug := 0
@@ -146,7 +146,6 @@ class ClipjumpDB extends SQLiteDB {
 
 		return bSuccess
 	}
-	
 	/*!
 		adds a clip to a channel (by PK): (pkCl, pkCh, bShouldUpdateExisting)
 			A clip is added to a channel, given byPK
@@ -168,7 +167,6 @@ class ClipjumpDB extends SQLiteDB {
 
 		return bSuccess
 	}
-	
 	/*!
 		channelByName: (chName)
 			Gets the Channel PK by name - if the given name does not exist, create a new channel with given name.
@@ -203,7 +201,6 @@ class ClipjumpDB extends SQLiteDB {
 		
 		return pk
 	}
-
 	/*!
 		clipByContent: (clContent, bAddToChCurrent)
 			Gets a Clip from DB by clip-content - if no clip with the given content exists, a new clip is created in DB
@@ -248,7 +245,6 @@ class ClipjumpDB extends SQLiteDB {
 		
 		return pk
 	}
-
 	/*!
 		timestamp: 
 			Converts AHK timestamp YYYYMMDDHHMMSSmmm to more human readable timestamp YYYY-MM-DD HH:MM:SS.mmm
@@ -264,7 +260,6 @@ class ClipjumpDB extends SQLiteDB {
 	}
 	
 	; ##################### private methods ##############################################################################
-	
 	/*!
 		Constructor: (filename := A_ScriptDir . "/clipjump.db", overwriteExisting := 0)
 			Creates the database object.
@@ -404,7 +399,36 @@ class ClipjumpDB extends SQLiteDB {
 	}
 
 	__migrate_0() {
+		Local Row
+
+		; Move old database to backup and open backup to different handle
+		base.CloseDB()
+		bakDB := this.filename ".v0"
+		currDB := this.filename
+		FileMove, % currDB, % bakDB, 1
+		OldDB := new SQLiteDB
+		OldDB.OpenDB(bakDB)
+
+		; Create a new database with the current scheme
+		base.OpenDB(currDB)
+		this.__InitDB()
+		
+		; Get all data from old database
+		SQL:= "SELECT * from history"
+		If !OldDB.GetTable(SQL, Result)
+			throw, { what: " ClipjumpDB SQLite Error", message:  OldDB.ErrorMsg, extra: OldDB.ErrorCode, file: A_LineFile, line: A_LineNumber }
+
+		; Associative Array to simply get the column index by column name
+		columnNameToIndex := Object()
+		Loop, % Result.ColumnCount
+			columnNameToIndex[Result.ColumnNames[A_Index]] := A_Index
+
 		; ToDo implement the migration from DB from clipjump 12.7 (user_version == 0) to user_version 1 ...
+		Loop % Result.RowCount  {
+		 ; Todo: map old data to new data and insert clip into database
+		 ; new["clip.data"] := result[a_index][columnNameToIndex["data"]]
+		}
+		
 		
 		this.ver := 1
 	}
