@@ -383,8 +383,14 @@ class ClipjumpDB extends SQLiteDB {
 		if (this._debug) ; _DBG_
 			OutputDebug % "<[" A_ThisFunc "()]" ; _DBG_
 	}	
-
+	/*!
+		___migrateDB: 
+			Automatically migrate the Clipjump DB to the recent version
+	*/
 	__migrateDB() {
+		if (this._debug) ; _DBG_
+			OutputDebug % ">[" A_ThisFunc "()]" ; _DBG_
+			
 		if (this._version > this.ver) { ; DB version supported with this implementation is NEWER than the given Database -> Migration
 			; Migration is performed incrementally 0 -> 1 -> 2 -> 3 ....
 			if (this.ver == 0)
@@ -396,11 +402,20 @@ class ClipjumpDB extends SQLiteDB {
 		} else if (this._version < this.ver) {
 			throw, { what: " ClipjumpDB Error", message: "Database cannot be downgraded" , extra: "-1", file: A_LineFile, line: A_LineNumber }
 		}
-	}
 
+		if (this._debug) ; _DBG_
+			OutputDebug % "<[" A_ThisFunc "()]" ; _DBG_
+	}
+	/*!
+		__migrate_0: 
+			Migrate database from Clipjump 12.7 DB to user_version 1
+	*/
 	__migrate_0() {
 		Local Row
 
+		if (this._debug) ; _DBG_
+			OutputDebug % ">[" A_ThisFunc "()]" ; _DBG_
+			
 		; Move old database to backup and open backup to different handle
 		base.CloseDB()
 		bakDB := this.filename ".v0"
@@ -431,5 +446,8 @@ class ClipjumpDB extends SQLiteDB {
 		
 		
 		this.ver := 1
+
+		if (this._debug) ; _DBG_
+			OutputDebug % "<[" A_ThisFunc "()]" ; _DBG_
 	}
 }
