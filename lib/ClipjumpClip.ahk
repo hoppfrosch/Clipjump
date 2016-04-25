@@ -23,7 +23,7 @@ class ClipjumpClip {
 	<hoppfrosch at hoppfrosch@gmx.de>: Original
 */	
     ; Versioning according SemVer http://semver.org/
-	_version := "0.1.2" ; Version of class implementation
+	_version := "0.1.3" ; Version of class implementation
 	_debug := 0
 	_content := ""
 	_type := 0
@@ -118,6 +118,69 @@ class ClipjumpClip {
 
 	; ##################### public methods ##############################################################################
 	/*!
+		DBAddToChannel
+			Adds the Clip to a Channel
+		Parameters:
+			database - SQLite database (Class_SqLiteDB)
+			channel - name of the Channel (DEFAULT: "Default")
+			ts - timestamp when clip was added (if left empty the current time is used - DEFAULT)
+			order_number - order_number
+			update - if same clip is added to same channel either leave db entry as is (default) or update the existing entry 
+		Return:  
+			pk - primary key of created database row
+	*/
+	DBAddToChannel(database, channel := "Default", ts := "", order_number := -1, update := 0){
+		bSuccess := 0
+		if (this._debug) ; _DBG_
+			OutputDebug % ">[" A_ThisFunc "(...)]" ; _DBG_
+
+		idClip := this.DBFindOrCreate(database)
+		channel := new ClipjumpChannel(channel, this.debug)
+		idChannel := channel.DBFindOrCreate(database)
+
+		if (ts = "")
+			ts := database.timestamp()
+			
+		SQL := "SELECT * FROM clip2channel WHERE clip2channel.fk_clip = " idClip " AND clip2channel.fk_channel = " idChannel ";"
+		if (this._debug) ; _DBG_
+			OutputDebug % "..[" A_ThisFunc "(...)] SQL: " SQL ; _DBG_
+		If !database.Query(SQL, RecordSet)
+			throw, { what: " ClipjumpDB SQLite Error", message:  database.ErrorMsg, extra: database.ErrorCode, file: A_LineFile, line: A_LineNumber }
+		
+		if(RecordSet.HasRows) {
+			if (update) {
+				SQL := "update clip2channel set fk_clip=" idClip ", fk_channel=" idChannel ", time='" ts "', order_number=" order_number ";"
+				if (this._debug) ; _DBG_
+					OutputDebug % "..[" A_ThisFunc "(...)] SQL: " SQL ; _DBG_
+				ret := database.Exec(SQL)
+				If !ret
+					throw, { what: " ClipjumpDB SQLite Error", message:  database.ErrorMsg, extra: database.ErrorCode, file: A_LineFile, line: A_LineNumber }
+			}
+		} else {
+			SQL := "INSERT INTO clip2channel (fk_clip, fk_channel, time, order_number) VALUES (" idClip "," idChannel ",'" ts "'," order_number ");"
+			if (this._debug) ; _DBG_
+				OutputDebug % "..[" A_ThisFunc "(...)] SQL: " SQL ; _DBG_
+			ret := database.Exec(SQL)
+			If !ret
+				throw, { what: " ClipjumpDB SQLite Error", message:  database.ErrorMsg, extra: database.ErrorCode, file: A_LineFile, line: A_LineNumber }
+		}
+
+		SQL := "SELECT * FROM clip2channel WHERE clip2channel.fk_clip = " idClip " AND clip2channel.fk_channel = " idChannel ";"
+		if (this._debug) ; _DBG_
+			OutputDebug % "..[" A_ThisFunc "(...)] SQL: " SQL ; _DBG_
+		If !database.Query(SQL, RecordSet)
+			throw, { what: " ClipjumpDB SQLite Error", message:  database.ErrorMsg, extra: database.ErrorCode, file: A_LineFile, line: A_LineNumber }
+		
+		RecordSet.Next(Row)
+		pk := Row[1]
+
+		if (this._debug) ; _DBG_
+			OutputDebug % "<[" A_ThisFunc "(...)] -> pk:" pk ; _DBG_
+
+		return pk
+	}
+	; ##################### public methods ##############################################################################
+	/*!
 		DBFind
 			Find Clip in the given database
 		Parameters:
@@ -164,8 +227,6 @@ class ClipjumpClip {
 		pk := this.DBFind(database)
 		
 		if (pk == 0) {
-			if (this._debug) ; _DBG_
-			OutputDebug % "..[" A_ThisFunc "(...)]: Create new clip" ; _DBG_
 			SQL := "INSERT INTO Clip (data, sha256, type, fileid) VALUES ('" this.content "','" this.checksum "','" this.type "','" this.fileid "');"
 			if (this._debug) ; _DBG_
 				OutputDebug % "..[" A_ThisFunc "(...)] SQL: " SQL ; _DBG_
@@ -174,7 +235,6 @@ class ClipjumpClip {
 				throw, { what: " ClipjumpDB SQLite Error", message:  database.ErrorMsg, extra: database.ErrorCode, file: A_LineFile, line: A_LineNumber }
 			pk := this.DBFind(database)
 		}
-		
 		
 		if (this._debug) ; _DBG_
 			OutputDebug % "<[" A_ThisFunc "(... )] -> pk:" pk ; _DBG_

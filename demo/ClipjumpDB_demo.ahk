@@ -19,15 +19,14 @@ try  ; Attempts to execute code.
 	Channel0 := new ClipjumpChannel("test0", 1)
 	Channel0.DBFindOrCreate(DB)
 	Channel1 := new ClipjumpChannel("test1", 1)
-	Channel1.DBFindOrCreate(DB)
-	Channel2 := new ClipjumpChannel("test2", 1)
-	Channel2.DBFindOrCreate(DB)
-	Channel3 := new ClipjumpChannel("test3", 1)
-	Channel3.DBFindOrCreate(DB)
-	
+	Channel1.DBFindOrCreate(DB)	
 
-	;Clip := new ClipjumpClip("Hallo",,1)
-	;a := []
+	Clip := new ClipjumpClip("Hallo",,1)
+	pk := Clip.DBAddToChannel(DB,"test0")
+	Sleep, 1
+	pk := Clip.DBAddToChannel(DB,"test0",,,1)
+
+	a := []
 	;y3a := DB.clipPkByClip(Clip,a)
 	
 	;y1a := DB.clipByContent("Eins")

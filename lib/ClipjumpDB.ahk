@@ -244,7 +244,9 @@ class ClipjumpDB extends SQLiteDB {
 	timestamp(t:=""){
 		if (t == "") 
 			t:= A_Now*1000+A_MSec
-		return SubStr(t, 1, 4) "-" SubStr(t,5,2) "-" SubStr(t,7,2) " " SubStr(t, 9, 2) ":" SubStr(t,11,2) ":" SubStr(t,13,2) "." SubStr(t,15,3)
+		S:= SubStr(t, 1, 4) "-" SubStr(t,5,2) "-" SubStr(t,7,2) " " SubStr(t, 9, 2) ":" SubStr(t,11,2) ":" SubStr(t,13,2) "." SubStr(t,15,3)
+
+		return S
 	}
 	
 	; ##################### private methods ##############################################################################
