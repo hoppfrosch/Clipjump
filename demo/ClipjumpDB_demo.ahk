@@ -6,6 +6,7 @@
 
 #Include %A_ScriptDir%\..\lib\ClipjumpDB.ahk
 #Include %A_ScriptDir%\..\lib\ClipjumpClip.ahk
+#Include %A_ScriptDir%\..\lib\ClipjumpChannel.ahk
 
 try  ; Attempts to execute code.
 {
@@ -15,21 +16,27 @@ try  ; Attempts to execute code.
 	OutputDebug % "Version:" . Version . "`nFilename:" . DB.filename
 
 
-	x1 := DB.channelByName("test1")
-	x2 := DB.channelByName("test2")
-	x3 := DB.channelByName("test3")
+	Channel0 := new ClipjumpChannel("test0", 1)
+	Channel0.DBFindOrCreate(DB)
+	Channel1 := new ClipjumpChannel("test1", 1)
+	Channel1.DBFindOrCreate(DB)
+	Channel2 := new ClipjumpChannel("test2", 1)
+	Channel2.DBFindOrCreate(DB)
+	Channel3 := new ClipjumpChannel("test3", 1)
+	Channel3.DBFindOrCreate(DB)
+	
 
-	Clip := new ClipjumpClip("Hallo",,1)
-	a := []
-	y3a := DB.clipPkByClip(Clip,a)
+	;Clip := new ClipjumpClip("Hallo",,1)
+	;a := []
+	;y3a := DB.clipPkByClip(Clip,a)
 	
-	y1a := DB.clipByContent("Eins")
-	y2a := DB.clipByContent("Zwei")
-	y1b := DB.clipByContent("Eins")
+	;y1a := DB.clipByContent("Eins")
+	;y2a := DB.clipByContent("Zwei")
+	;y1b := DB.clipByContent("Eins")
 	
 	
-	bSuccess := DB.addClipToChannelPK("test4", x3)
-	OutputDebug % y1a " - " y1b " - " y2a " - " y3a
+	;bSuccess := DB.addClipToChannelPK("test4", x3)
+	;OutputDebug % y1a " - " y1b " - " y2a " - " y3a
 	
 }
 catch e  ; Handles the first error/exception raised by the block above.
