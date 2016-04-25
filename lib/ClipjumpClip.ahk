@@ -23,7 +23,7 @@ class ClipjumpClip {
 	<hoppfrosch at hoppfrosch@gmx.de>: Original
 */	
     ; Versioning according SemVer http://semver.org/
-	_version := "0.1.1" ; Version of class implementation
+	_version := "0.1.2" ; Version of class implementation
 	_debug := 0
 	_content := ""
 	_type := 0
@@ -115,6 +115,37 @@ class ClipjumpClip {
 			return this._version_class
 		}
 	}
+
+	; ##################### public methods ##############################################################################
+	/*!
+		DBFind
+			Find Clip in the given database
+		Parameters:
+			database - SQLite database (Class_SqLiteDB)
+		Return:  
+			pk - primary key of found database row
+	*/
+	DBFind(database){
+		pk := 0
+		if (this._debug) ; _DBG_
+			OutputDebug % ">[" A_ThisFunc "(...)]" ; _DBG_
+
+		SQL := "SELECT * FROM clip WHERE clip.sha256 = """ this.checksum """;"
+		if (this._debug) ; _DBG_
+			OutputDebug % "..[" A_ThisFunc "(...)] SQL: " SQL ; _DBG_
+		If !database.Query(SQL, RecordSet)
+			throw, { what: " ClipjumpDB SQLite Error", message:  database.ErrorMsg, extra: database.ErrorCode, file: A_LineFile, line: A_LineNumber }
+		
+		if(RecordSet.HasRows) {
+			RecordSet.Next(Row)
+			pk := Row[1]
+		}
+
+		if (this._debug) ; _DBG_
+			OutputDebug % "<[" A_ThisFunc "(...)] -> pk:" pk ; _DBG_
+
+		return pk
+	}
 	
 	; ##################### public methods ##############################################################################
 	/*!
@@ -128,32 +159,22 @@ class ClipjumpClip {
 	DBFindOrCreate(database){
 		pk := 0
 		if (this._debug) ; _DBG_
-			OutputDebug % ">[" A_ThisFunc "(... )]" ; _DBG_
+			OutputDebug % ">[" A_ThisFunc "(...)]" ; _DBG_
 
-		SQL := "SELECT * FROM clip WHERE clip.sha256 = """ this.checksum """;"
-		if (this._debug) ; _DBG_
-			OutputDebug % "  [" A_ThisFunc "(... )] SQL: " SQL ; _DBG_
-		If !database.Query(SQL, RecordSet)
-			throw, { what: " ClipjumpDB SQLite Error", message:  base.ErrorMsg, extra: base.ErrorCode, file: A_LineFile, line: A_LineNumber }
+		pk := this.DBFind(database)
 		
-		if(!RecordSet.HasRows) {
+		if (pk == 0) {
 			if (this._debug) ; _DBG_
-			OutputDebug % "  [" A_ThisFunc "(...)]: Create new clip" ; _DBG_
+			OutputDebug % "..[" A_ThisFunc "(...)]: Create new clip" ; _DBG_
 			SQL := "INSERT INTO Clip (data, sha256, type, fileid) VALUES ('" this.content "','" this.checksum "','" this.type "','" this.fileid "');"
 			if (this._debug) ; _DBG_
-				OutputDebug % "  [" A_ThisFunc "(... )] SQL: " SQL ; _DBG_
+				OutputDebug % "..[" A_ThisFunc "(...)] SQL: " SQL ; _DBG_
 			ret := database.Exec(SQL)
 			If !ret
-				throw, { what: " ClipjumpDB SQLite Error", message:  base.ErrorMsg, extra: base.ErrorCode, file: A_LineFile, line: A_LineNumber }
+				throw, { what: " ClipjumpDB SQLite Error", message:  database.ErrorMsg, extra: database.ErrorCode, file: A_LineFile, line: A_LineNumber }
+			pk := this.DBFind(database)
 		}
 		
-		SQL := "SELECT * FROM clip WHERE clip.sha256 = """ this.checksum """;"
-		if (this._debug) ; _DBG_
-			OutputDebug % "  [" A_ThisFunc "(... )] SQL: " SQL ; _DBG_
-		If !database.Query(SQL, RecordSet)
-			throw, { what: " ClipjumpDB SQLite Error", message:  base.ErrorMsg, extra: base.ErrorCode, file: A_LineFile, line: A_LineNumber }
-		RecordSet.Next(Row)
-		pk := Row[1]
 		
 		if (this._debug) ; _DBG_
 			OutputDebug % "<[" A_ThisFunc "(... )] -> pk:" pk ; _DBG_
@@ -174,7 +195,7 @@ class ClipjumpClip {
 		this._debug := debug
 		
 		if (this._debug) ; _DBG_
-			OutputDebug % ">[" A_ThisFunc "(=" content ", type =" type ")] (version: " this._version ")" ; _DBG_
+			OutputDebug % ">[" A_ThisFunc "(content=""" content """, type =" type ")] (version: " this._version ")" ; _DBG_
 			
 		; Store given parameters within properties
 		this._content := content
@@ -182,7 +203,7 @@ class ClipjumpClip {
 		this._checksum := SHA256(this._content)
 
 		if (this._debug) ; _DBG_
-			OutputDebug % "<[" A_ThisFunc "(=" content ", type =" type ")] (version: " this._version ")"	; _DBG_
+			OutputDebug % "<[" A_ThisFunc "(content=""" content """, type =" type ")] (version: " this._version ")"	; _DBG_
 	}
 	/*!
 		Destructor: 
