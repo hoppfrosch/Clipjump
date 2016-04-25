@@ -28,14 +28,16 @@ class ClipjumpDB extends SQLiteDB {
 	<hoppfrosch at hoppfrosch@gmx.de>: Original
 */	
     ; Versioning according SemVer http://semver.org/
-	_version_class := "0.5.0-#6-3" ; Version of class implementation
+	_version_class := "0.5.0-#6-4" ; Version of class implementation
 	; Simple incrementing version
 	_version := 1 ; version of the database scheme
 	_debug := 0
 	_filename := ""
 	_chArchive := "Archive"
 	idChArchive := ""
-	idChDefault := ""	
+	_chDefault := "Default"
+	idChDefault := ""
+	_chCurrent := _chDefault	
 	idChCurrent := ""
 
 	; ##################### Properties (AHK >1.1.16.x) #################################################################
@@ -160,57 +162,14 @@ class ClipjumpDB extends SQLiteDB {
 		if (this._debug) ; _DBG_
 			OutputDebug % ">[" A_ThisFunc "(clContent=" clContent ", pkCh=" pkCh ", bShouldUpdateExisting=" bShouldUpdateExisting ")]" ; _DBG_
 
-		pkCl := this.clipByContent(clContent, 0) ; Create or search clip and don't add Clip to current channel 
+		Clip = new ClipjumpClip(clContent)
+		pkCl := Clip.DBFindOrCreate(this)
 		bSuccess := this.addClipPKToChannelPK(pkCl, pkCh, bShouldUpdateExisting) ; Add clip to given channel
 		
 		if (this._debug) ; _DBG_
 			OutputDebug % ">[" A_ThisFunc "(clContent=" clContent ", pkCh= " pkCh ", bShouldUpdateExisting=" bShouldUpdateExisting ")] => " bSucess ; _DBG
 
 		return bSuccess
-	}
-	/*!
-		clipByContent: (clContent, bAddToChCurrent)
-			Gets a Clip from DB by clip-content - if no clip with the given content exists, a new clip is created in DB
-			The new clip is added automatically to Archive-Channel and optionally to current Channel
-		Parameters:
-			clContent: content of the clip
-			bAddToChCurrent: Flag to select whether clip is added to current channel
-			
-	*/
-	clipByContent(clContent, bAddToChCurrent := 1) {
-		if (this._debug) ; _DBG_
-			OutputDebug % ">[" A_ThisFunc "(clContent=" clContent ")]" ; _DBG_
-
-		; Determine Checksum from content
-		checksum := SHA256(clContent)
-
-		SQL := "SELECT * FROM clip WHERE clip.sha256 = """ checksum """;"
-		If !base.Query(SQL, RecordSet)
-			throw, { what: " ClipjumpDB SQLite Error", message:  base.ErrorMsg, extra: base.ErrorCode, file: A_LineFile, line: A_LineNumber }
-		
-		if(!RecordSet.HasRows) {
-			if (this._debug) ; _DBG_
-			OutputDebug % "  [" A_ThisFunc "(clContent=" clContent ")]: Create new clip" ; _DBG_
-			SQL := "INSERT INTO Clip (data, sha256) VALUES ('" clContent "','" checksum "');"
-			ret := base.Exec(SQL)
-			If !ret
-				throw, { what: " ClipjumpDB SQLite Error", message:  base.ErrorMsg, extra: base.ErrorCode, file: A_LineFile, line: A_LineNumber }
-		}
-		
-		SQL := "SELECT * FROM clip WHERE clip.sha256 = """ checksum """;"
-		If !base.Query(SQL, RecordSet)
-			throw, { what: " ClipjumpDB SQLite Error", message:  base.ErrorMsg, extra: base.ErrorCode, file: A_LineFile, line: A_LineNumber }
-		RecordSet.Next(Row)
-		pk := Row[1]
-
-		this.addClipPKToChannelPK(pk, this.idChArchive)
-		if (bAddToChCurrent == 1)
-			this.addClipPKToChannelPK(pk, this.idChCurrent)
-		
-		if (this._debug) ; _DBG_
-			OutputDebug % "<[" A_ThisFunc "(clContent=" clContent ")] -> pk=" pk ; _DBG_
-		
-		return pk
 	}
 	/*!
 		clipPkByClip 
@@ -304,7 +263,7 @@ class ClipjumpDB extends SQLiteDB {
 		this.__migrateDB()
 		
 		if (this._debug) ; _DBG_
-			OutputDebug % "<[" A_ThisFunc "(filename=" filename ", overwriteExisting =" overwriteExisting ")] (version: " this._ver_class ")" ; _DBG_
+			OutputDebug % "<[" A_ThisFunc "(filename=" filename ", overwriteExisting =" overwriteExisting ")] (version: " this._version_class ")" ; _DBG_
 	}
 	/*!
 		Destructor: 
@@ -369,7 +328,7 @@ class ClipjumpDB extends SQLiteDB {
 
 		chArchive := new ClipjumpChannel(this._chArchive, this.debug)
 		this.idChArchive := chArchive.DBFindOrCreate(this)
-		chDefault := new ClipjumpChannel("Default", this.debug)
+		chDefault := new ClipjumpChannel(this._chDefault, this.debug)
 		this.idChDefault := chDefault.DBFindOrCreate(this)
 		this.idChCurrent := this.idChDefault
 
