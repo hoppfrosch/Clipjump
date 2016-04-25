@@ -100,12 +100,15 @@ class ClipjumpChannel {
 	DBFind(database){
 		pk := 0
 
+		if (this._debug) ; _DBG_
+			OutputDebug % ">[" A_ThisFunc "(name='" this.name "')]" ; _DBG_
+
 		SQL := "SELECT * FROM channel WHERE channel.name = """ this.name """"
 		if (this.caseInsensitive)
 			SQL := SQL " COLLATE NOCASE"
 		SQL := SQL ";"
 		if (this._debug) ; _DBG_
-			OutputDebug % ">[" A_ThisFunc "(...)] SQL: " SQL ; _DBG_
+			OutputDebug % "..[" A_ThisFunc "(name='" this.name "')] SQL: " SQL ; _DBG_
 		If !database.Query(SQL, RecordSet)
 			throw, { what: " ClipjumpDB SQLite Error", message:  database.ErrorMsg, extra: database.ErrorCode, file: A_LineFile, line: A_LineNumber }
 		
@@ -115,7 +118,7 @@ class ClipjumpChannel {
 		}
 
 		if (this._debug) ; _DBG_
-			OutputDebug % "<[" A_ThisFunc "(... )] -> pk:" pk ; _DBG_
+			OutputDebug % "<[" A_ThisFunc "(name='" this.name "')] -> pk:" pk ; _DBG_
 
 		return pk
 	}
@@ -132,13 +135,11 @@ class ClipjumpChannel {
 	DBFindOrCreate(database){
 		pk := 0
 		if (this._debug) ; _DBG_
-			OutputDebug % ">[" A_ThisFunc "(...)]" ; _DBG_
+			OutputDebug % ">[" A_ThisFunc "(name='" this.name "')]" ; _DBG_
 
 		pk := this.DBFind(database)
 		
 		if(pk == 0) {
-			if (this._debug) ; _DBG_
-			OutputDebug % "..[" A_ThisFunc "(...)]: Create new clip" ; _DBG_
 			SQL := "INSERT INTO Channel (name) VALUES ('" this.name "');"
 			if (this._debug) ; _DBG_
 				OutputDebug % "..[" A_ThisFunc "(...)] SQL: " SQL ; _DBG_
@@ -150,7 +151,7 @@ class ClipjumpChannel {
 		
 		
 		if (this._debug) ; _DBG_
-			OutputDebug % "<[" A_ThisFunc "(... )] -> pk:" pk ; _DBG_
+			OutputDebug % "<[" A_ThisFunc "(name='" this.name "')] -> pk:" pk ; _DBG_
 
 		return pk
 	}

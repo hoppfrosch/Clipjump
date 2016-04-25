@@ -34,10 +34,20 @@ class ClipjumpClip {
 	checksum[] {
 	/* ------------------------------------------------------------------------------- 
 	Property: ver [get]
-	Get the version of the class implementation
+	Get the checksum (SHA256) of the clip contents
 	*/
 		get {
 			return this._checksum
+		}
+	}
+	chksum[] {
+	/* ------------------------------------------------------------------------------- 
+	Property: chksum [get]
+	Get the short checksum (SHA256) of the clip contents
+	*/
+		get {
+			S:= SubStr(this._checksum, 1, 8)
+			return S
 		}
 	}
 	content[] {
@@ -129,13 +139,13 @@ class ClipjumpClip {
 		Return:  
 			pk - primary key of created database row
 	*/
-	DBAddToChannel(database, channel := "Default", ts := "", order_number := -1, update := 0){
+	DBAddToChannel(database, chInsert := "Default", ts := "", order_number := -1, update := 0){
 		bSuccess := 0
 		if (this._debug) ; _DBG_
-			OutputDebug % ">[" A_ThisFunc "(...)]" ; _DBG_
+			OutputDebug % ">[" A_ThisFunc "(sha256='" this.chksum "', channel='" chInsert "', ts='" ts "', order_number =" order_number ", update= " update ")]" ; _DBG_
 
 		idClip := this.DBFindOrCreate(database)
-		channel := new ClipjumpChannel(channel, this.debug)
+		channel := new ClipjumpChannel(chInsert, this.debug)
 		idChannel := channel.DBFindOrCreate(database)
 
 		if (ts = "")
@@ -143,7 +153,7 @@ class ClipjumpClip {
 			
 		SQL := "SELECT * FROM clip2channel WHERE clip2channel.fk_clip = " idClip " AND clip2channel.fk_channel = " idChannel ";"
 		if (this._debug) ; _DBG_
-			OutputDebug % "..[" A_ThisFunc "(...)] SQL: " SQL ; _DBG_
+			OutputDebug % "..[" A_ThisFunc "(ha256='" this.chksum "', channel='" chInsert "')] SQL: " SQL ; _DBG_
 		If !database.Query(SQL, RecordSet)
 			throw, { what: " ClipjumpDB SQLite Error", message:  database.ErrorMsg, extra: database.ErrorCode, file: A_LineFile, line: A_LineNumber }
 		
@@ -151,7 +161,7 @@ class ClipjumpClip {
 			if (update) {
 				SQL := "update clip2channel set fk_clip=" idClip ", fk_channel=" idChannel ", time='" ts "', order_number=" order_number ";"
 				if (this._debug) ; _DBG_
-					OutputDebug % "..[" A_ThisFunc "(...)] SQL: " SQL ; _DBG_
+					OutputDebug % "..[" A_ThisFunc "(sha256='" this.chksum "', channel='" chInsert "')] SQL: " SQL ; _DBG_
 				ret := database.Exec(SQL)
 				If !ret
 					throw, { what: " ClipjumpDB SQLite Error", message:  database.ErrorMsg, extra: database.ErrorCode, file: A_LineFile, line: A_LineNumber }
@@ -159,7 +169,7 @@ class ClipjumpClip {
 		} else {
 			SQL := "INSERT INTO clip2channel (fk_clip, fk_channel, time, order_number) VALUES (" idClip "," idChannel ",'" ts "'," order_number ");"
 			if (this._debug) ; _DBG_
-				OutputDebug % "..[" A_ThisFunc "(...)] SQL: " SQL ; _DBG_
+				OutputDebug % "..[" A_ThisFunc "s(ha256='" this.chksum "', channel='" chInsert "')] SQL: " SQL ; _DBG_
 			ret := database.Exec(SQL)
 			If !ret
 				throw, { what: " ClipjumpDB SQLite Error", message:  database.ErrorMsg, extra: database.ErrorCode, file: A_LineFile, line: A_LineNumber }
@@ -167,7 +177,7 @@ class ClipjumpClip {
 
 		SQL := "SELECT * FROM clip2channel WHERE clip2channel.fk_clip = " idClip " AND clip2channel.fk_channel = " idChannel ";"
 		if (this._debug) ; _DBG_
-			OutputDebug % "..[" A_ThisFunc "(...)] SQL: " SQL ; _DBG_
+			OutputDebug % "..[" A_ThisFunc "(sha256='" this.chksum "', channel='" chInsert "')] SQL: " SQL ; _DBG_
 		If !database.Query(SQL, RecordSet)
 			throw, { what: " ClipjumpDB SQLite Error", message:  database.ErrorMsg, extra: database.ErrorCode, file: A_LineFile, line: A_LineNumber }
 		
@@ -175,7 +185,7 @@ class ClipjumpClip {
 		pk := Row[1]
 
 		if (this._debug) ; _DBG_
-			OutputDebug % "<[" A_ThisFunc "(...)] -> pk:" pk ; _DBG_
+			OutputDebug % "<[" A_ThisFunc "(sha256='" this.chksum "', channel='" chInsert "')] -> pk:" pk ; _DBG_
 
 		return pk
 	}
@@ -191,11 +201,11 @@ class ClipjumpClip {
 	DBFind(database){
 		pk := 0
 		if (this._debug) ; _DBG_
-			OutputDebug % ">[" A_ThisFunc "(...)]" ; _DBG_
+			OutputDebug % ">[" A_ThisFunc "(sha256='" this.chksum "')]" ; _DBG_
 
 		SQL := "SELECT * FROM clip WHERE clip.sha256 = """ this.checksum """;"
 		if (this._debug) ; _DBG_
-			OutputDebug % "..[" A_ThisFunc "(...)] SQL: " SQL ; _DBG_
+			OutputDebug % "..[" A_ThisFunc "(sha256='" this.chksum "')] SQL: " SQL ; _DBG_
 		If !database.Query(SQL, RecordSet)
 			throw, { what: " ClipjumpDB SQLite Error", message:  database.ErrorMsg, extra: database.ErrorCode, file: A_LineFile, line: A_LineNumber }
 		
@@ -205,7 +215,7 @@ class ClipjumpClip {
 		}
 
 		if (this._debug) ; _DBG_
-			OutputDebug % "<[" A_ThisFunc "(...)] -> pk:" pk ; _DBG_
+			OutputDebug % "<[" A_ThisFunc "(sha256='" this.chksum "')] -> pk:" pk ; _DBG_
 
 		return pk
 	}
@@ -222,14 +232,14 @@ class ClipjumpClip {
 	DBFindOrCreate(database){
 		pk := 0
 		if (this._debug) ; _DBG_
-			OutputDebug % ">[" A_ThisFunc "(...)]" ; _DBG_
+			OutputDebug % ">[" A_ThisFunc "(sha256='" this.chksum "')]" ; _DBG_
 
 		pk := this.DBFind(database)
 		
 		if (pk == 0) {
 			SQL := "INSERT INTO Clip (data, sha256, type, fileid) VALUES ('" this.content "','" this.checksum "','" this.type "','" this.fileid "');"
 			if (this._debug) ; _DBG_
-				OutputDebug % "..[" A_ThisFunc "(...)] SQL: " SQL ; _DBG_
+				OutputDebug % "..[" A_ThisFunc "(sha256='" this.chksum "')] SQL: " SQL ; _DBG_
 			ret := database.Exec(SQL)
 			If !ret
 				throw, { what: " ClipjumpDB SQLite Error", message:  database.ErrorMsg, extra: database.ErrorCode, file: A_LineFile, line: A_LineNumber }
@@ -237,7 +247,7 @@ class ClipjumpClip {
 		}
 		
 		if (this._debug) ; _DBG_
-			OutputDebug % "<[" A_ThisFunc "(... )] -> pk:" pk ; _DBG_
+			OutputDebug % "<[" A_ThisFunc "(sha256='" this.chksum "')] -> pk:" pk ; _DBG_
 
 		return pk
 	}
@@ -253,17 +263,14 @@ class ClipjumpClip {
 	__New(content, type := 0, debug := 0) {
 
 		this._debug := debug
-		
-		if (this._debug) ; _DBG_
-			OutputDebug % ">[" A_ThisFunc "(content=""" content """, type =" type ")] (version: " this._version ")" ; _DBG_
-			
+
 		; Store given parameters within properties
 		this._content := content
 		this._type := type 	
 		this._checksum := SHA256(this._content)
 
 		if (this._debug) ; _DBG_
-			OutputDebug % "<[" A_ThisFunc "(content=""" content """, type =" type ")] (version: " this._version ")"	; _DBG_
+			OutputDebug % "*[" A_ThisFunc "(content=""" content """, type =" type ")] (version: " this._version ")"	; _DBG_
 	}
 	/*!
 		Destructor: 
@@ -271,7 +278,7 @@ class ClipjumpClip {
 	*/
 	__Delete() {
 		if (this._debug) ; _DBG_
-			OutputDebug % "*[" A_ThisFunc "()]" ; _DBG_
+			OutputDebug % "*[" A_ThisFunc "(sha256='" this.chksum "')] (version: " this._version ")"	; _DBG_
 	}
 
 }
