@@ -5,6 +5,7 @@
 ;SetBatchLines, -1
 
 #Include %A_ScriptDir%\..\lib\ClipjumpDB.ahk
+#Include %A_ScriptDir%\..\lib\ClipjumpClip.ahk
 
 try  ; Attempts to execute code.
 {
@@ -18,12 +19,17 @@ try  ; Attempts to execute code.
 	x2 := DB.channelByName("test2")
 	x3 := DB.channelByName("test3")
 
+	Clip := new ClipjumpClip("Hallo",,1)
+	a := []
+	y3a := DB.clipPkByClip(Clip,a)
+	
 	y1a := DB.clipByContent("Eins")
 	y2a := DB.clipByContent("Zwei")
 	y1b := DB.clipByContent("Eins")
-
+	
+	
 	bSuccess := DB.addClipToChannelPK("test4", x3)
-	OutputDebug % y1a " - " y2a " - " y1b
+	OutputDebug % y1a " - " y1b " - " y2a " - " y3a
 	
 }
 catch e  ; Handles the first error/exception raised by the block above.
