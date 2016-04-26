@@ -28,9 +28,9 @@ class ClipjumpDB extends SQLiteDB {
 	<hoppfrosch at hoppfrosch@gmx.de>: Original
 */	
     ; Versioning according SemVer http://semver.org/
-	_version_class := "0.5.0-#6-4" ; Version of class implementation
+	_version := "0.5.0-#6-5" ; Version of class implementation
 	; Simple incrementing version
-	_version := 1 ; version of the database scheme
+	_version_db := 1 ; version of the database scheme
 	_debug := 0
 	_filename := ""
 	_chArchive := "Archive"
@@ -95,7 +95,7 @@ class ClipjumpDB extends SQLiteDB {
 	Get the version of the class implementation
 	*/
 		get {
-			return this._version_class
+			return this._version
 		}
 	}
 	ver_sqlite[] {
@@ -221,7 +221,7 @@ class ClipjumpDB extends SQLiteDB {
 		this._debug := debug
 		
 		if (this._debug) ; _DBG_
-			OutputDebug % ">[" A_ThisFunc "(filename=" filename ", overwriteExisting =" overwriteExisting ")] (version: " this._version_class ")" ; _DBG_
+			OutputDebug % ">[" A_ThisFunc "(filename=" filename ", overwriteExisting =" overwriteExisting ")] (version: " this._version ")" ; _DBG_
 			
 		; Store given parameters within properties
 		this._filename := filename
@@ -263,7 +263,7 @@ class ClipjumpDB extends SQLiteDB {
 		this.__migrateDB()
 		
 		if (this._debug) ; _DBG_
-			OutputDebug % "<[" A_ThisFunc "(filename=" filename ", overwriteExisting =" overwriteExisting ")] (version: " this._version_class ")" ; _DBG_
+			OutputDebug % "<[" A_ThisFunc "(filename=" filename ", overwriteExisting =" overwriteExisting ")] (version: " this._version ")" ; _DBG_
 	}
 	/*!
 		Destructor: 
@@ -276,7 +276,7 @@ class ClipjumpDB extends SQLiteDB {
 			throw, { what: " ClipjumpDB SQLite Error", message:  base.ErrorMsg, extra: base.ErrorCode, file: A_LineFile, line: A_LineNumber }
 		}
 		if (this._debug) ; _DBG_
-			OutputDebug % "<[" A_ThisFunc "(filename=" filename ", overwriteExisting =" overwriteExisting ")] (version: " this._version_class ")" ; _DBG_
+			OutputDebug % "<[" A_ThisFunc "(filename=" filename ", overwriteExisting =" overwriteExisting ")] (version: " this._version ")" ; _DBG_
 
 	}
 	/*!
@@ -286,6 +286,11 @@ class ClipjumpDB extends SQLiteDB {
 	__InitDB() {
 		if (this._debug) ; _DBG_
 			OutputDebug % ">[" A_ThisFunc "()]" ; _DBG_
+
+		SQL := "PRAGMA user_version=""" this._version_db """;"
+		If !base.Exec(SQL)
+			throw, { what: " ClipjumpDB SQLite Error", message:  base.ErrorMsg, extra: base.ErrorCode, file: A_LineFile, line: A_LineNumber }
+					
 		; ------------------------------------------------------------------------------------------------------------
 		; Enable foreign key support: http://www.sqlite.org/foreignkeys.html#fk_enable
 		SQL := "PRAGMA foreign_keys=ON;"
@@ -343,7 +348,7 @@ class ClipjumpDB extends SQLiteDB {
 		if (this._debug) ; _DBG_
 			OutputDebug % ">[" A_ThisFunc "()]" ; _DBG_
 			
-		if (this._version > this.ver) { ; DB version supported with this implementation is NEWER than the given Database -> Migration
+		if (this._version_db > this.ver) { ; DB version supported with this implementation is NEWER than the given Database -> Migration
 			; Migration is performed incrementally 0 -> 1 -> 2 -> 3 ....
 			if (this.ver == 0)
 				this.__migrate_0() ; Migrate to dbversion 1
@@ -351,7 +356,7 @@ class ClipjumpDB extends SQLiteDB {
 			;if (this.ver == 1)
 			;	this.__migrate_1() ; Migrate to dbversion 2
 							
-		} else if (this._version < this.ver) {
+		} else if (this._version_db < this.ver) {
 			throw, { what: " ClipjumpDB Error", message: "Database cannot be downgraded" , extra: "-1", file: A_LineFile, line: A_LineNumber }
 		}
 
@@ -364,9 +369,6 @@ class ClipjumpDB extends SQLiteDB {
 	*/
 	__migrate_0() {
 		Local Row
-		
-		this.ver := 1
-		return
 		
 		if (this._debug) ; _DBG_
 			OutputDebug % ">[" A_ThisFunc "()]" ; _DBG_
