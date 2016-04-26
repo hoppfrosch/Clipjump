@@ -14,6 +14,7 @@
 #include %A_LineFile%\..
 #include SHA-256.ahk
 #include ClipjumpClip.ahk
+#include ClipjumpChannel.ahk
 #include %A_LineFile%\..\SQLiteDB
 #include Class_SQLiteDB.ahk
 
@@ -28,7 +29,7 @@ class ClipjumpDB extends SQLiteDB {
 	<hoppfrosch at hoppfrosch@gmx.de>: Original
 */	
     ; Versioning according SemVer http://semver.org/
-	_version := "0.5.0-#6-5" ; Version of class implementation
+	_version := "0.5.0-#6-6" ; Version of class implementation
 	; Simple incrementing version
 	_version_db := 1 ; version of the database scheme
 	_debug := 0
@@ -119,7 +120,7 @@ class ClipjumpDB extends SQLiteDB {
 	*/
 	addClipPKToChannelPK(pkCl, pkCh, bShouldUpdateExisting := 0) {
 		bSuccess := 0
-		if (this._debug) ; _DBG_
+		if (this._debug) ; _DBG_ 
 			OutputDebug % ">[" A_ThisFunc "(pkCl=" pkCl ", pkCh=" pkCh ", bShouldUpdateExisting=" bShouldUpdateExisting ")]" ; _DBG_
 
 		; Check whether the clip already is member of the channel
@@ -168,29 +169,19 @@ class ClipjumpDB extends SQLiteDB {
 		
 		if (this._debug) ; _DBG_
 			OutputDebug % ">[" A_ThisFunc "(clContent=" clContent ", pkCh= " pkCh ", bShouldUpdateExisting=" bShouldUpdateExisting ")] => " bSucess ; _DBG
-
 		return bSuccess
 	}
 	/*!
-		clipPkByClip 
-			Gets a Clip from DB by Clip object - if no clip with the given content exists, a new clip is created in DB
-			The new clip is added to all channels in given channel array (Default: no channel).
+		escapeQuotesSql: 
+			replace quote (") in data content with double quote ("") - works like escaping
 		Parameters:
-			Clip - Clip object to be added
-			Channels - Array of channel pks, the clip has to be added to (default NONE)
+			s - String to escape
 		Return:  
-			pk - primary key of added clip
+			escaped string
 	*/
-	clipPkByClip(Clip, Channels){
-		pk := Clip.DBFindOrCreate(this)
-		
-		Loop % Channels.Length()
-			this.addClipPKToChannelPK(pk, Channels[A_Index])
-		
-		if (this._debug) ; _DBG_
-			OutputDebug % "<[" A_ThisFunc "(... )] -> pk:" pk ; _DBG_
-
-		return pk
+	escapeQuotesSql(s){
+		StringReplace, s, s, % """", % """""", All
+		return s
 	}
 	/*!
 		timestamp: 
@@ -270,13 +261,13 @@ class ClipjumpDB extends SQLiteDB {
 			Closes the database on object deconstruction
 	*/
 	__Delete() {
-		if (this._debug) ; _DBG_
-			OutputDebug % ">[" A_ThisFunc "()]" ; _DBG_
+		if (this._debug) ; _DBG_ 
+			OutputDebug % ">[" A_ThisFunc "()] (version: " this._version ")" ; _DBG_
 		If !base.CloseDB() {
 			throw, { what: " ClipjumpDB SQLite Error", message:  base.ErrorMsg, extra: base.ErrorCode, file: A_LineFile, line: A_LineNumber }
 		}
 		if (this._debug) ; _DBG_
-			OutputDebug % "<[" A_ThisFunc "(filename=" filename ", overwriteExisting =" overwriteExisting ")] (version: " this._version ")" ; _DBG_
+			OutputDebug % "<[" A_ThisFunc "()] (version: " this._version ")" ; _DBG_
 
 	}
 	/*!
@@ -288,12 +279,16 @@ class ClipjumpDB extends SQLiteDB {
 			OutputDebug % ">[" A_ThisFunc "()]" ; _DBG_
 
 		SQL := "PRAGMA user_version=""" this._version_db """;"
+		if (this._debug) ; _DBG_
+			OutputDebug % "..[" A_ThisFunc "()] SQL: " SQL ; _DBG_
 		If !base.Exec(SQL)
 			throw, { what: " ClipjumpDB SQLite Error", message:  base.ErrorMsg, extra: base.ErrorCode, file: A_LineFile, line: A_LineNumber }
 					
 		; ------------------------------------------------------------------------------------------------------------
 		; Enable foreign key support: http://www.sqlite.org/foreignkeys.html#fk_enable
 		SQL := "PRAGMA foreign_keys=ON;"
+		if (this._debug) ; _DBG_
+			OutputDebug % "..[" A_ThisFunc "()] SQL: " SQL ; _DBG_
 		If !base.Exec(SQL)
 			throw, { what: " ClipjumpDB SQLite Error", message:  base.ErrorMsg, extra: base.ErrorCode, file: A_LineFile, line: A_LineNumber }
 
@@ -307,6 +302,8 @@ class ClipjumpDB extends SQLiteDB {
 		 . "fileid TEXT,"
 		 . "size INTEGER"
 		 . ");"
+		if (this._debug) ; _DBG_
+			OutputDebug % "..[" A_ThisFunc "()] SQL: " SQL ; _DBG_
 		If !base.Exec(SQL)
 			throw, { what: " ClipjumpDB SQLite Error", message:  base.ErrorMsg, extra: base.ErrorCode, file: A_LineFile, line: A_LineNumber }
 
@@ -316,6 +313,8 @@ class ClipjumpDB extends SQLiteDB {
 		 . "id   INTEGER PRIMARY KEY AUTOINCREMENT,"
 		 . "name TEXT    UNIQUE      NOT NULL"
 		 . ");"
+		if (this._debug) ; _DBG_
+			OutputDebug % "..[" A_ThisFunc "()] SQL: " SQL ; _DBG_
 		If !base.Exec(SQL)
 			throw, { what: " ClipjumpDB SQLite Error", message:  base.ErrorMsg, extra: base.ErrorCode, file: A_LineFile, line: A_LineNumber }
 
@@ -328,6 +327,8 @@ class ClipjumpDB extends SQLiteDB {
 		 . "  time TEXT NOT NULL,"
 		 . "  order_number INTEGER"
 		 . ");"
+		if (this._debug) ; _DBG_
+			OutputDebug % "..[" A_ThisFunc "()] SQL: " SQL ; _DBG_
 		If !base.Exec(SQL)
 			throw, { what: " ClipjumpDB SQLite Error", message:  base.ErrorMsg, extra: base.ErrorCode, file: A_LineFile, line: A_LineNumber }
 
@@ -336,7 +337,7 @@ class ClipjumpDB extends SQLiteDB {
 		chDefault := new ClipjumpChannel(this._chDefault, this.debug)
 		this.idChDefault := chDefault.DBFindOrCreate(this)
 		this.idChCurrent := this.idChDefault
-
+		
 		if (this._debug) ; _DBG_
 			OutputDebug % "<[" A_ThisFunc "()]" ; _DBG_
 	}	
@@ -397,15 +398,15 @@ class ClipjumpDB extends SQLiteDB {
 
 		; ToDo implement the migration from DB from clipjump 12.7 (user_version == 0) to user_version 1 ...
 		Loop % Result.RowCount  {
-		 	; Todo: map old data to new data and insert clip into database
-		 	Clip := new ClipjumpClip(result[A_Index][columnNameToIndex["data"]],result[A_Index][columnNameToIndex["type"]])
-		 	; new["clip.data"] := result[a_index][columnNameToIndex["data"]]
+			currIdRow := A_Index
+		 	content := this.escapeQuotesSql(result.rows[currIdRow][columnNameToIndex["data"]])
+		 	type := result.rows[currIdRow][columnNameToIndex["type"]]
+		 	ts := result.rows[currIdRow][columnNameToIndex["time"]] ".000"
+		 	Clip := new ClipjumpClip(content, type, this.debug)
+		 	pk := Clip.DBAddToChannel(this,this._chArchive, ts,,2)
 		}
 		
-		
-		
-
-		if (this._debug) ; _DBG_
+		if (this._debug) ; _DBG_ 
 			OutputDebug % "<[" A_ThisFunc "()]" ; _DBG_
 	}
 }

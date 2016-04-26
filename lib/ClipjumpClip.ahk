@@ -135,7 +135,7 @@ class ClipjumpClip {
 			channel - name of the Channel (DEFAULT: "Default")
 			ts - timestamp when clip was added (if left empty the current time is used - DEFAULT)
 			order_number - order_number
-			update - if same clip is added to same channel either leave db entry as is (default) or update the existing entry 
+			update - if same clip is added to same channel either leave db entry as is (=0), update the existing entry (=1) or create duplicate (=2) 
 		Return:  
 			pk - primary key of created database row
 	*/
@@ -153,19 +153,19 @@ class ClipjumpClip {
 			
 		SQL := "SELECT * FROM clip2channel WHERE clip2channel.fk_clip = " idClip " AND clip2channel.fk_channel = " idChannel ";"
 		if (this._debug) ; _DBG_
-			OutputDebug % "..[" A_ThisFunc "(ha256='" this.chksum "', channel='" chInsert "')] SQL: " SQL ; _DBG_
+			OutputDebug % "..[" A_ThisFunc "(sha256='" this.chksum "', channel='" chInsert "')] SQL: " SQL ; _DBG_
 		If !database.Query(SQL, RecordSet)
 			throw, { what: " ClipjumpDB SQLite Error", message:  database.ErrorMsg, extra: database.ErrorCode, file: A_LineFile, line: A_LineNumber }
 		
 		if(RecordSet.HasRows) {
-			if (update) {
+			if (update==1) {
 				SQL := "update clip2channel set fk_clip=" idClip ", fk_channel=" idChannel ", time='" ts "', order_number=" order_number ";"
 				if (this._debug) ; _DBG_
 					OutputDebug % "..[" A_ThisFunc "(sha256='" this.chksum "', channel='" chInsert "')] SQL: " SQL ; _DBG_
 				ret := database.Exec(SQL)
 				If !ret
 					throw, { what: " ClipjumpDB SQLite Error", message:  database.ErrorMsg, extra: database.ErrorCode, file: A_LineFile, line: A_LineNumber }
-			}
+			} 
 		} else {
 			SQL := "INSERT INTO clip2channel (fk_clip, fk_channel, time, order_number) VALUES (" idClip "," idChannel ",'" ts "'," order_number ");"
 			if (this._debug) ; _DBG_
@@ -237,7 +237,7 @@ class ClipjumpClip {
 		pk := this.DBFind(database)
 		
 		if (pk == 0) {
-			SQL := "INSERT INTO Clip (data, sha256, type, fileid) VALUES ('" this.content "','" this.checksum "','" this.type "','" this.fileid "');"
+			SQL := "INSERT INTO Clip (data, sha256, type, fileid) VALUES (""" this.content """,""" this.checksum """,""" this.type """,""" this.fileid """);"
 			if (this._debug) ; _DBG_
 				OutputDebug % "..[" A_ThisFunc "(sha256='" this.chksum "')] SQL: " SQL ; _DBG_
 			ret := database.Exec(SQL)

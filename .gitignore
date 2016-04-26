@@ -11,3 +11,5 @@ ClipjumpCustom.ini
 _Obsolete_/
 demo/clipjump.db
 *.bak
+/demo/*.db
+/demo/*.db.*
