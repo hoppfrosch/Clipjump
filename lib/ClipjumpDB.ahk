@@ -29,7 +29,7 @@ class ClipjumpDB extends SQLiteDB {
 	<hoppfrosch at hoppfrosch@gmx.de>: Original
 */	
     ; Versioning according SemVer http://semver.org/
-	_version := "0.5.0-#7-1" ; Version of class implementation
+	_version := "0.5.0-#8.1" ; Version of class implementation
 	; Simple incrementing version
 	_version_db := 1 ; version of the database scheme
 	_debug := 0
@@ -414,7 +414,7 @@ class ClipjumpDB extends SQLiteDB {
 		 	type := result.rows[currIdRow][columnNameToIndex["type"]]
 		 	ts := result.rows[currIdRow][columnNameToIndex["time"]] ".000"
 		 	Clip := new ClipjumpClip(content, type, this.debug)
-		 	pk := Clip.DBAddToChannel(this,this._chArchive, ts,,2)
+		 	pk := Clip.DBAddToChannel(this,this._chArchive, ts,,2) ; trailing "2" indicates that multiple clips per channel are allowed
 		}
 		
 		if (this._debug) ; _DBG_ 
