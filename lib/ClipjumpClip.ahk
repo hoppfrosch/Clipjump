@@ -23,7 +23,7 @@ class ClipjumpClip {
 	<hoppfrosch at hoppfrosch@gmx.de>: Original
 */	
     ; Versioning according SemVer http://semver.org/
-	_version := "0.1.4" ; Version of class implementation
+	_version := "0.1.4-#8.1" ; Version of class implementation
 	_debug := 0
 	_content := ""
 	_type := 0
@@ -135,14 +135,14 @@ class ClipjumpClip {
 			channel - name of the Channel (DEFAULT: "Default")
 			ts - timestamp when clip was added (if left empty the current time is used - DEFAULT)
 			order_number - order_number
-			update - if same clip is added to same channel either leave db entry as is (=0), update the existing entry (=1) or create duplicate (=2) 
+			insertMode - if same clip is added to same channel either leave db entry as is (=0), update the existing entry (=1) or create identical entry (=2) 
 		Return:  
 			pk - primary key of created database row
 	*/
-	DBAddToChannel(database, chInsert := "Default", ts := "", order_number := -1, update := 0){
+	DBAddToChannel(database, chInsert := "Default", ts := "", order_number := -1, insertMode := 0){
 		bSuccess := 0
 		if (this._debug) ; _DBG_
-			OutputDebug % ">[" A_ThisFunc "(sha256='" this.chksum "', channel='" chInsert "', ts='" ts "', order_number =" order_number ", update= " update ")]" ; _DBG_
+			OutputDebug % ">[" A_ThisFunc "(sha256='" this.chksum "', channel='" chInsert "', ts='" ts "', order_number =" order_number ", insertMode= " insertMode ")]" ; _DBG_
 
 		idClip := this.DBFindOrCreate(database)
 		channel := new ClipjumpChannel(chInsert, this.debug)
@@ -156,17 +156,30 @@ class ClipjumpClip {
 			OutputDebug % "..[" A_ThisFunc "(sha256='" this.chksum "', channel='" chInsert "')] SQL: " SQL ; _DBG_
 		If !database.Query(SQL, RecordSet)
 			throw, { what: " ClipjumpDB SQLite Error", message:  database.ErrorMsg, extra: database.ErrorCode, file: A_LineFile, line: A_LineNumber }
-		
+
+		shouldBeAdded := 0
 		if(RecordSet.HasRows) {
-			if (update==1) {
+			if (insertMode==1) {
 				SQL := "update clip2channel set fk_clip=" idClip ", fk_channel=" idChannel ", time='" ts "', order_number=" order_number ";"
 				if (this._debug) ; _DBG_
 					OutputDebug % "..[" A_ThisFunc "(sha256='" this.chksum "', channel='" chInsert "')] SQL: " SQL ; _DBG_
 				ret := database.Exec(SQL)
 				If !ret
 					throw, { what: " ClipjumpDB SQLite Error", message:  database.ErrorMsg, extra: database.ErrorCode, file: A_LineFile, line: A_LineNumber }
-			} 
+			} else if (insertMode ==2) {
+				if (this._debug) ; _DBG_
+					OutputDebug % "..Clip already exists in channel - will be added as duplicate ..." ; _DBG_
+				; Unless an identical entry exists, the clip should be added again -> allows duplicate/multiple identical clips in one channel
+				shouldBeAdded := 1
+			}
 		} else {
+			shouldBeAdded := 1
+		}	
+		
+		if (shouldBeAdded) {
+			; An new entry should be generated in two cases:
+			; 1.) The entry does not exist yet
+			; 2.) Duplicate/Multiple entries are allowed 
 			SQL := "INSERT INTO clip2channel (fk_clip, fk_channel, time, order_number) VALUES (" idClip "," idChannel ",'" ts "'," order_number ");"
 			if (this._debug) ; _DBG_
 				OutputDebug % "..[" A_ThisFunc "s(ha256='" this.chksum "', channel='" chInsert "')] SQL: " SQL ; _DBG_
