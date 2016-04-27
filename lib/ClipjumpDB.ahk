@@ -13,6 +13,8 @@
 
 #include %A_LineFile%\..
 #include SHA-256.ahk
+#include ClipjumpClip.ahk
+#include ClipjumpChannel.ahk
 #include %A_LineFile%\..\SQLiteDB
 #include Class_SQLiteDB.ahk
 
@@ -27,14 +29,16 @@ class ClipjumpDB extends SQLiteDB {
 	<hoppfrosch at hoppfrosch@gmx.de>: Original
 */	
     ; Versioning according SemVer http://semver.org/
-	_version_class := "0.4.2" ; Version of class implementation
+	_version := "0.5.0-#6-6" ; Version of class implementation
 	; Simple incrementing version
-	_version := 1 ; version of the database scheme
+	_version_db := 1 ; version of the database scheme
 	_debug := 0
 	_filename := ""
 	_chArchive := "Archive"
 	idChArchive := ""
-	idChDefault := ""	
+	_chDefault := "Default"
+	idChDefault := ""
+	_chCurrent := _chDefault	
 	idChCurrent := ""
 
 	; ##################### Properties (AHK >1.1.16.x) #################################################################
@@ -92,7 +96,7 @@ class ClipjumpDB extends SQLiteDB {
 	Get the version of the class implementation
 	*/
 		get {
-			return this._version_class
+			return this._version
 		}
 	}
 	ver_sqlite[] {
@@ -116,7 +120,7 @@ class ClipjumpDB extends SQLiteDB {
 	*/
 	addClipPKToChannelPK(pkCl, pkCh, bShouldUpdateExisting := 0) {
 		bSuccess := 0
-		if (this._debug) ; _DBG_
+		if (this._debug) ; _DBG_ 
 			OutputDebug % ">[" A_ThisFunc "(pkCl=" pkCl ", pkCh=" pkCh ", bShouldUpdateExisting=" bShouldUpdateExisting ")]" ; _DBG_
 
 		; Check whether the clip already is member of the channel
@@ -146,7 +150,6 @@ class ClipjumpDB extends SQLiteDB {
 
 		return bSuccess
 	}
-	
 	/*!
 		adds a clip to a channel (by PK): (pkCl, pkCh, bShouldUpdateExisting)
 			A clip is added to a channel, given byPK
@@ -160,95 +163,26 @@ class ClipjumpDB extends SQLiteDB {
 		if (this._debug) ; _DBG_
 			OutputDebug % ">[" A_ThisFunc "(clContent=" clContent ", pkCh=" pkCh ", bShouldUpdateExisting=" bShouldUpdateExisting ")]" ; _DBG_
 
-		pkCl := this.clipByContent(clContent, 0) ; Create or search clip and don't add Clip to current channel 
+		Clip = new ClipjumpClip(clContent)
+		pkCl := Clip.DBFindOrCreate(this)
 		bSuccess := this.addClipPKToChannelPK(pkCl, pkCh, bShouldUpdateExisting) ; Add clip to given channel
 		
 		if (this._debug) ; _DBG_
 			OutputDebug % ">[" A_ThisFunc "(clContent=" clContent ", pkCh= " pkCh ", bShouldUpdateExisting=" bShouldUpdateExisting ")] => " bSucess ; _DBG
-
 		return bSuccess
 	}
-	
 	/*!
-		channelByName: (chName)
-			Gets the Channel PK by name - if the given name does not exist, create a new channel with given name.
+		escapeQuotesSql: 
+			replace quote (") in data content with double quote ("") - works like escaping
 		Parameters:
-			chName - Name of the channel
+			s - String to escape
+		Return:  
+			escaped string
 	*/
-	channelByName(chName) {
-		if (this._debug) ; _DBG_
-			OutputDebug % ">[" A_ThisFunc "(chName=" chName ")]" ; _DBG_
-
-		SQL := "SELECT * FROM channel WHERE channel.name = """ chName """;"
-		If !base.Query(SQL, RecordSet)
-			throw, { what: " ClipjumpDB SQLite Error", message:  base.ErrorMsg, extra: base.ErrorCode, file: A_LineFile, line: A_LineNumber }
-		
-		if(!RecordSet.HasRows) {
-			if (this._debug) ; _DBG_
-			OutputDebug % "  [" A_ThisFunc "(chName=" chName ")]: Create new channel" ; _DBG_
-			SQL := "INSERT INTO Channel (name) VALUES ('" chName "');"
-			ret := base.Exec(SQL)
-			If !ret
-				throw, { what: " ClipjumpDB SQLite Error", message:  base.ErrorMsg, extra: base.ErrorCode, file: A_LineFile, line: A_LineNumber }
-		}
-		
-		SQL := "SELECT * FROM channel WHERE channel.name = """ chName """;"
-		If !base.Query(SQL, RecordSet)
-			throw, { what: " ClipjumpDB SQLite Error", message:  base.ErrorMsg, extra: base.ErrorCode, file: A_LineFile, line: A_LineNumber }
-		RecordSet.Next(Row)
-		pk := Row[1]
-			
-		if (this._debug) ; _DBG_
-			OutputDebug % "<[" A_ThisFunc "(chName=" chName ")] -> pk=" pk ; _DBG_
-		
-		return pk
+	escapeQuotesSql(s){
+		StringReplace, s, s, % """", % """""", All
+		return s
 	}
-
-	/*!
-		clipByContent: (clContent, bAddToChCurrent)
-			Gets a Clip from DB by clip-content - if no clip with the given content exists, a new clip is created in DB
-			The new clip is added automatically to Archive-Channel and optionally to current Channel
-		Parameters:
-			clContent: content of the clip
-			bAddToChCurrent: Flag to select whether clip is added to current channel
-			
-	*/
-	clipByContent(clContent, bAddToChCurrent := 1) {
-		if (this._debug) ; _DBG_
-			OutputDebug % ">[" A_ThisFunc "(clContent=" clContent ")]" ; _DBG_
-
-		; Determine Checksum from content
-		checksum := SHA256(clContent)
-
-		SQL := "SELECT * FROM clip WHERE clip.sha256 = """ checksum """;"
-		If !base.Query(SQL, RecordSet)
-			throw, { what: " ClipjumpDB SQLite Error", message:  base.ErrorMsg, extra: base.ErrorCode, file: A_LineFile, line: A_LineNumber }
-		
-		if(!RecordSet.HasRows) {
-			if (this._debug) ; _DBG_
-			OutputDebug % "  [" A_ThisFunc "(clContent=" clContent ")]: Create new clip" ; _DBG_
-			SQL := "INSERT INTO Clip (data, sha256) VALUES ('" clContent "','" checksum "');"
-			ret := base.Exec(SQL)
-			If !ret
-				throw, { what: " ClipjumpDB SQLite Error", message:  base.ErrorMsg, extra: base.ErrorCode, file: A_LineFile, line: A_LineNumber }
-		}
-		
-		SQL := "SELECT * FROM clip WHERE clip.sha256 = """ checksum """;"
-		If !base.Query(SQL, RecordSet)
-			throw, { what: " ClipjumpDB SQLite Error", message:  base.ErrorMsg, extra: base.ErrorCode, file: A_LineFile, line: A_LineNumber }
-		RecordSet.Next(Row)
-		pk := Row[1]
-
-		this.addClipPKToChannelPK(pk, this.idChArchive)
-		if (bAddToChCurrent == 1)
-			this.addClipPKToChannelPK(pk, this.idChCurrent)
-		
-		if (this._debug) ; _DBG_
-			OutputDebug % "<[" A_ThisFunc "(clContent=" clContent ")] -> pk=" pk ; _DBG_
-		
-		return pk
-	}
-
 	/*!
 		timestamp: 
 			Converts AHK timestamp YYYYMMDDHHMMSSmmm to more human readable timestamp YYYY-MM-DD HH:MM:SS.mmm
@@ -260,11 +194,12 @@ class ClipjumpDB extends SQLiteDB {
 	timestamp(t:=""){
 		if (t == "") 
 			t:= A_Now*1000+A_MSec
-		return SubStr(t, 1, 4) "-" SubStr(t,5,2) "-" SubStr(t,7,2) " " SubStr(t, 9, 2) ":" SubStr(t,11,2) ":" SubStr(t,13,2) "." SubStr(t,15,3)
+		S:= SubStr(t, 1, 4) "-" SubStr(t,5,2) "-" SubStr(t,7,2) " " SubStr(t, 9, 2) ":" SubStr(t,11,2) ":" SubStr(t,13,2) "." SubStr(t,15,3)
+
+		return S
 	}
 	
 	; ##################### private methods ##############################################################################
-	
 	/*!
 		Constructor: (filename := A_ScriptDir . "/clipjump.db", overwriteExisting := 0)
 			Creates the database object.
@@ -274,7 +209,8 @@ class ClipjumpDB extends SQLiteDB {
 				- else the existing datavase will be used.	
 	*/
 	__New(filename := "clipjump.db", overwriteExisting := 0,  debug := 0) {
-
+		this._debug := debug
+		
 		if (this._debug) ; _DBG_
 			OutputDebug % ">[" A_ThisFunc "(filename=" filename ", overwriteExisting =" overwriteExisting ")] (version: " this._version ")" ; _DBG_
 			
@@ -325,13 +261,13 @@ class ClipjumpDB extends SQLiteDB {
 			Closes the database on object deconstruction
 	*/
 	__Delete() {
-		if (this._debug) ; _DBG_
-			OutputDebug % ">[" A_ThisFunc "()]" ; _DBG_
+		if (this._debug) ; _DBG_ 
+			OutputDebug % ">[" A_ThisFunc "()] (version: " this._version ")" ; _DBG_
 		If !base.CloseDB() {
 			throw, { what: " ClipjumpDB SQLite Error", message:  base.ErrorMsg, extra: base.ErrorCode, file: A_LineFile, line: A_LineNumber }
 		}
 		if (this._debug) ; _DBG_
-			OutputDebug % "<[" A_ThisFunc "()]" ; _DBG_
+			OutputDebug % "<[" A_ThisFunc "()] (version: " this._version ")" ; _DBG_
 
 	}
 	/*!
@@ -341,9 +277,18 @@ class ClipjumpDB extends SQLiteDB {
 	__InitDB() {
 		if (this._debug) ; _DBG_
 			OutputDebug % ">[" A_ThisFunc "()]" ; _DBG_
+
+		SQL := "PRAGMA user_version=""" this._version_db """;"
+		if (this._debug) ; _DBG_
+			OutputDebug % "..[" A_ThisFunc "()] SQL: " SQL ; _DBG_
+		If !base.Exec(SQL)
+			throw, { what: " ClipjumpDB SQLite Error", message:  base.ErrorMsg, extra: base.ErrorCode, file: A_LineFile, line: A_LineNumber }
+					
 		; ------------------------------------------------------------------------------------------------------------
 		; Enable foreign key support: http://www.sqlite.org/foreignkeys.html#fk_enable
 		SQL := "PRAGMA foreign_keys=ON;"
+		if (this._debug) ; _DBG_
+			OutputDebug % "..[" A_ThisFunc "()] SQL: " SQL ; _DBG_
 		If !base.Exec(SQL)
 			throw, { what: " ClipjumpDB SQLite Error", message:  base.ErrorMsg, extra: base.ErrorCode, file: A_LineFile, line: A_LineNumber }
 
@@ -357,6 +302,8 @@ class ClipjumpDB extends SQLiteDB {
 		 . "fileid TEXT,"
 		 . "size INTEGER"
 		 . ");"
+		if (this._debug) ; _DBG_
+			OutputDebug % "..[" A_ThisFunc "()] SQL: " SQL ; _DBG_
 		If !base.Exec(SQL)
 			throw, { what: " ClipjumpDB SQLite Error", message:  base.ErrorMsg, extra: base.ErrorCode, file: A_LineFile, line: A_LineNumber }
 
@@ -366,6 +313,8 @@ class ClipjumpDB extends SQLiteDB {
 		 . "id   INTEGER PRIMARY KEY AUTOINCREMENT,"
 		 . "name TEXT    UNIQUE      NOT NULL"
 		 . ");"
+		if (this._debug) ; _DBG_
+			OutputDebug % "..[" A_ThisFunc "()] SQL: " SQL ; _DBG_
 		If !base.Exec(SQL)
 			throw, { what: " ClipjumpDB SQLite Error", message:  base.ErrorMsg, extra: base.ErrorCode, file: A_LineFile, line: A_LineNumber }
 
@@ -378,19 +327,29 @@ class ClipjumpDB extends SQLiteDB {
 		 . "  time TEXT NOT NULL,"
 		 . "  order_number INTEGER"
 		 . ");"
+		if (this._debug) ; _DBG_
+			OutputDebug % "..[" A_ThisFunc "()] SQL: " SQL ; _DBG_
 		If !base.Exec(SQL)
 			throw, { what: " ClipjumpDB SQLite Error", message:  base.ErrorMsg, extra: base.ErrorCode, file: A_LineFile, line: A_LineNumber }
-				
-		this.idChArchive := this.channelByName(this._chArchive)
-		this.idChDefault := this.channelByName("Default")
-		this.idChCurrent := this.idChDefault
 
+		chArchive := new ClipjumpChannel(this._chArchive, this.debug)
+		this.idChArchive := chArchive.DBFindOrCreate(this)
+		chDefault := new ClipjumpChannel(this._chDefault, this.debug)
+		this.idChDefault := chDefault.DBFindOrCreate(this)
+		this.idChCurrent := this.idChDefault
+		
 		if (this._debug) ; _DBG_
 			OutputDebug % "<[" A_ThisFunc "()]" ; _DBG_
 	}	
-
+	/*!
+		___migrateDB: 
+			Automatically migrate the Clipjump DB to the recent version
+	*/
 	__migrateDB() {
-		if (this._version > this.ver) { ; DB version supported with this implementation is NEWER than the given Database -> Migration
+		if (this._debug) ; _DBG_
+			OutputDebug % ">[" A_ThisFunc "()]" ; _DBG_
+			
+		if (this._version_db > this.ver) { ; DB version supported with this implementation is NEWER than the given Database -> Migration
 			; Migration is performed incrementally 0 -> 1 -> 2 -> 3 ....
 			if (this.ver == 0)
 				this.__migrate_0() ; Migrate to dbversion 1
@@ -398,14 +357,56 @@ class ClipjumpDB extends SQLiteDB {
 			;if (this.ver == 1)
 			;	this.__migrate_1() ; Migrate to dbversion 2
 							
-		} else if (this._version < this.ver) {
+		} else if (this._version_db < this.ver) {
 			throw, { what: " ClipjumpDB Error", message: "Database cannot be downgraded" , extra: "-1", file: A_LineFile, line: A_LineNumber }
 		}
-	}
 
+		if (this._debug) ; _DBG_
+			OutputDebug % "<[" A_ThisFunc "()]" ; _DBG_
+	}
+	/*!
+		__migrate_0: 
+			Migrate database from Clipjump 12.7 DB to user_version 1
+	*/
 	__migrate_0() {
-		; ToDo implement the migration from DB from clipjump 12.7 (user_version == 0) to user_version 1 ...
+		Local Row
 		
-		this.ver := 1
+		if (this._debug) ; _DBG_
+			OutputDebug % ">[" A_ThisFunc "()]" ; _DBG_
+			
+		; Move old database to backup and open backup to different handle
+		base.CloseDB()
+		bakDB := this.filename ".v0"
+		currDB := this.filename
+		FileMove, % currDB, % bakDB, 1
+		OldDB := new SQLiteDB
+		OldDB.OpenDB(bakDB)
+
+		; Create a new database with the current scheme
+		base.OpenDB(currDB)
+		this.__InitDB()
+		
+		; Get all data from old database
+		SQL:= "SELECT * from history"
+		If !OldDB.GetTable(SQL, Result)
+			throw, { what: " ClipjumpDB SQLite Error", message:  OldDB.ErrorMsg, extra: OldDB.ErrorCode, file: A_LineFile, line: A_LineNumber }
+
+		; Associative Array to simply get the column index by column name
+		columnNameToIndex := Object()
+		Loop, % Result.ColumnCount
+			columnNameToIndex[Result.ColumnNames[A_Index]] := A_Index
+
+		; ToDo implement the migration from DB from clipjump 12.7 (user_version == 0) to user_version 1 ...
+		Loop % Result.RowCount  {
+			currIdRow := A_Index
+		 	content := this.escapeQuotesSql(result.rows[currIdRow][columnNameToIndex["data"]])
+		 	type := result.rows[currIdRow][columnNameToIndex["type"]]
+		 	ts := result.rows[currIdRow][columnNameToIndex["time"]] ".000"
+		 	Clip := new ClipjumpClip(content, type, this.debug)
+		 	pk := Clip.DBAddToChannel(this,this._chArchive, ts,,2)
+		}
+		
+		if (this._debug) ; _DBG_ 
+			OutputDebug % "<[" A_ThisFunc "()]" ; _DBG_
 	}
 }
