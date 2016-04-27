@@ -29,7 +29,7 @@ class ClipjumpDB extends SQLiteDB {
 	<hoppfrosch at hoppfrosch@gmx.de>: Original
 */	
     ; Versioning according SemVer http://semver.org/
-	_version := "0.5.0-#6-6" ; Version of class implementation
+	_version := "0.5.0-#7-1" ; Version of class implementation
 	; Simple incrementing version
 	_version_db := 1 ; version of the database scheme
 	_debug := 0
@@ -40,6 +40,44 @@ class ClipjumpDB extends SQLiteDB {
 	idChDefault := ""
 	_chCurrent := _chDefault	
 	idChCurrent := ""
+
+	class Helper {
+	; ******************************************************************************************************************************************
+	/*
+		Class: ClipjumpDB.Helper
+		Class providing helper functions for class ClipjumpDB
+
+		Authors:
+		<hoppfrosch at hoppfrosch@gmx.de>: Original
+	*/
+		/*!
+			escapeQuotesSql: 
+				replace quote (") in data content with double quote ("") - works like escaping
+			Parameters:
+				s - String to escape
+			Return:  
+				escaped string
+		*/
+		escapeQuotesSql(s){
+			StringReplace, s, s, % """", % """""", All
+			return s
+		}
+		/*!
+			timestamp: 
+				Converts AHK timestamp YYYYMMDDHHMMSSmmm to more human readable timestamp YYYY-MM-DD HH:MM:SS.mmm
+			Parameters:
+				t - AHK-timestamp (format YYYYMMDDHHMMSSmmm). If t == "", A_Now*1000+A_MSec will be assumed as default
+			Return:  
+				timestamp in format YYYY-MM-DD HH:MM:SS.mmm
+		*/
+		timestamp(t:=""){
+			if (t == "") 
+				t:= A_Now*1000+A_MSec
+			S:= SubStr(t, 1, 4) "-" SubStr(t,5,2) "-" SubStr(t,7,2) " " SubStr(t, 9, 2) ":" SubStr(t,11,2) ":" SubStr(t,13,2) "." SubStr(t,15,3)
+
+			return S
+		}
+	}
 
 	; ##################### Properties (AHK >1.1.16.x) #################################################################
 	debug[] {
@@ -130,7 +168,7 @@ class ClipjumpDB extends SQLiteDB {
 			
 		if(!RecordSet.HasRows) {
 		; Clip IS NOT member of the channel -> create a new entry in Table Clip2Channel
-			SQL := "INSERT INTO clip2channel (fk_clip, fk_channel, time) VALUES(" pkCl "," pkCh ",""" this.timestamp() """);"
+			SQL := "INSERT INTO clip2channel (fk_clip, fk_channel, time) VALUES(" pkCl "," pkCh ",""" this.helper.timestamp() """);"
 			If !base.Exec(SQL)
 					throw, { what: " ClipjumpDB SQLite Error", message:  base.ErrorMsg, extra: base.ErrorCode, file: A_LineFile, line: A_LineNumber }
 			bSuccess := 1
@@ -139,7 +177,7 @@ class ClipjumpDB extends SQLiteDB {
 			RecordSet.Next(Row)
 			pk := Row[1]
 			if (bShouldUpdateExisting == 1) {
-				SQL := "UPDATE clip2channel SET clip2channel.time = """ this.timestamp() """ WHERE clip2channel.id = """ pk """;"
+				SQL := "UPDATE clip2channel SET clip2channel.time = """ this.helper.timestamp() """ WHERE clip2channel.id = """ pk """;"
 				If !base.Exec(SQL)
 					throw, { what: " ClipjumpDB SQLite Error", message:  base.ErrorMsg, extra: base.ErrorCode, file: A_LineFile, line: A_LineNumber }
 				bSuccess := 1
@@ -171,34 +209,7 @@ class ClipjumpDB extends SQLiteDB {
 			OutputDebug % ">[" A_ThisFunc "(clContent=" clContent ", pkCh= " pkCh ", bShouldUpdateExisting=" bShouldUpdateExisting ")] => " bSucess ; _DBG
 		return bSuccess
 	}
-	/*!
-		escapeQuotesSql: 
-			replace quote (") in data content with double quote ("") - works like escaping
-		Parameters:
-			s - String to escape
-		Return:  
-			escaped string
-	*/
-	escapeQuotesSql(s){
-		StringReplace, s, s, % """", % """""", All
-		return s
-	}
-	/*!
-		timestamp: 
-			Converts AHK timestamp YYYYMMDDHHMMSSmmm to more human readable timestamp YYYY-MM-DD HH:MM:SS.mmm
-		Parameters:
-			t - AHK-timestamp (format YYYYMMDDHHMMSSmmm). If t == "", A_Now*1000+A_MSec will be assumed as default
-		Return:  
-			timestamp in format YYYY-MM-DD HH:MM:SS.mmm
-	*/
-	timestamp(t:=""){
-		if (t == "") 
-			t:= A_Now*1000+A_MSec
-		S:= SubStr(t, 1, 4) "-" SubStr(t,5,2) "-" SubStr(t,7,2) " " SubStr(t, 9, 2) ":" SubStr(t,11,2) ":" SubStr(t,13,2) "." SubStr(t,15,3)
 
-		return S
-	}
-	
 	; ##################### private methods ##############################################################################
 	/*!
 		Constructor: (filename := A_ScriptDir . "/clipjump.db", overwriteExisting := 0)
@@ -399,7 +410,7 @@ class ClipjumpDB extends SQLiteDB {
 		; ToDo implement the migration from DB from clipjump 12.7 (user_version == 0) to user_version 1 ...
 		Loop % Result.RowCount  {
 			currIdRow := A_Index
-		 	content := this.escapeQuotesSql(result.rows[currIdRow][columnNameToIndex["data"]])
+		 	content := this.helper.escapeQuotesSql(result.rows[currIdRow][columnNameToIndex["data"]])
 		 	type := result.rows[currIdRow][columnNameToIndex["type"]]
 		 	ts := result.rows[currIdRow][columnNameToIndex["time"]] ".000"
 		 	Clip := new ClipjumpClip(content, type, this.debug)
