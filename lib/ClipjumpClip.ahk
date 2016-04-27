@@ -23,7 +23,7 @@ class ClipjumpClip {
 	<hoppfrosch at hoppfrosch@gmx.de>: Original
 */	
     ; Versioning according SemVer http://semver.org/
-	_version := "0.1.3" ; Version of class implementation
+	_version := "0.1.4" ; Version of class implementation
 	_debug := 0
 	_content := ""
 	_type := 0
@@ -149,7 +149,7 @@ class ClipjumpClip {
 		idChannel := channel.DBFindOrCreate(database)
 
 		if (ts = "")
-			ts := database.timestamp()
+			ts := database.helper.timestamp()
 			
 		SQL := "SELECT * FROM clip2channel WHERE clip2channel.fk_clip = " idClip " AND clip2channel.fk_channel = " idChannel ";"
 		if (this._debug) ; _DBG_
