@@ -12,6 +12,7 @@
 */
 
 #include %A_LineFile%\..
+#include DbgOut.ahk
 
 class ClipjumpChannel {
 ; ******************************************************************************************************************************************
@@ -21,9 +22,10 @@ class ClipjumpChannel {
 
 	Authors:
 	<hoppfrosch at hoppfrosch@gmx.de>: Original
+	
 */	
     ; Versioning according SemVer http://semver.org/
-	_version := "0.1.1" ; Version of class implementation
+	_version := "0.1.2-#10.1" ; Version of class implementation
 	_debug := 0
 	_name := ""
 	_caseInsensitive := "1"
@@ -100,15 +102,13 @@ class ClipjumpChannel {
 	DBFind(database){
 		pk := 0
 
-		if (this._debug) ; _DBG_
-			OutputDebug % ">[" A_ThisFunc "(name='" this.name "')]" ; _DBG_
+		dbgOut(">[" A_ThisFunc "(name='" this.name "')]", this.debug)
 
 		SQL := "SELECT * FROM channel WHERE channel.name = """ this.name """"
 		if (this.caseInsensitive)
 			SQL := SQL " COLLATE NOCASE"
 		SQL := SQL ";"
-		if (this._debug) ; _DBG_
-			OutputDebug % "..[" A_ThisFunc "(name='" this.name "')] SQL: " SQL ; _DBG_
+		dbgOut("|[" A_ThisFunc "(name='" this.name "')] SQL: " SQL, this.debug)
 		If !database.Query(SQL, RecordSet)
 			throw, { what: " ClipjumpDB SQLite Error", message:  database.ErrorMsg, extra: database.ErrorCode, file: A_LineFile, line: A_LineNumber }
 		
@@ -116,10 +116,7 @@ class ClipjumpChannel {
 			RecordSet.Next(Row)
 			pk := Row[1]
 		}
-
-		if (this._debug) ; _DBG_
-			OutputDebug % "<[" A_ThisFunc "(name='" this.name "')] -> pk:" pk ; _DBG_
-
+		dbgOut("<[" A_ThisFunc "(name='" this.name "')] -> pk:" pk, this.debug)
 		return pk
 	}
 	
@@ -134,25 +131,17 @@ class ClipjumpChannel {
 	*/
 	DBFindOrCreate(database){
 		pk := 0
-		if (this._debug) ; _DBG_
-			OutputDebug % ">[" A_ThisFunc "(name='" this.name "')]" ; _DBG_
-
+		dbgOut(">[" A_ThisFunc "(name='" this.name "')]", this.debug)
 		pk := this.DBFind(database)
-		
 		if(pk == 0) {
 			SQL := "INSERT INTO Channel (name) VALUES ('" this.name "');"
-			if (this._debug) ; _DBG_
-				OutputDebug % "..[" A_ThisFunc "(...)] SQL: " SQL ; _DBG_
+			dbgOut("|[" A_ThisFunc "(...)] SQL: " SQL, this.debug)
 			ret := database.Exec(SQL)
 			If !ret
 				throw, { what: " ClipjumpDB SQLite Error", message:  database.ErrorMsg, extra: database.ErrorCode, file: A_LineFile, line: A_LineNumber }
 			pk := this.DBFind(database)
 		}
-		
-		
-		if (this._debug) ; _DBG_
-			OutputDebug % "<[" A_ThisFunc "(name='" this.name "')] -> pk:" pk ; _DBG_
-
+		dbgOut("<[" A_ThisFunc "(name='" this.name "')] -> pk:" pk, this.debug)
 		return pk
 	}
 
@@ -165,12 +154,8 @@ class ClipjumpChannel {
 			type - Clip type (0: text (DEFAULT), 1: Image)
 	*/
 	__New(name, debug) {
-
 		this._debug := debug
-		
-		if (this._debug) ; _DBG_
-			OutputDebug % "*[" A_ThisFunc "(name=""" name """)] (version: " this._version ")" ; _DBG_
-			
+		dbgOut("=[" A_ThisFunc "(name=""" name """)] (version: " this._version ")", this.debug)
 		; Store given parameters within properties
 		this._name := name
 		this._caseInsensitive := 1
@@ -180,8 +165,6 @@ class ClipjumpChannel {
 			Closes the database on object deconstruction
 	*/
 	__Delete() {
-		if (this._debug) ; _DBG_
-			OutputDebug % "*[" A_ThisFunc "(name=""" this.name """)] (version: " this._version ")" ; _DBG_
+		dbgOut("=[" A_ThisFunc "(name=""" this.name """)] (version: " this._version ")", this.debug)
 	}
-
 }

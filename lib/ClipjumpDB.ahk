@@ -15,6 +15,7 @@
 #include SHA-256.ahk
 #include ClipjumpClip.ahk
 #include ClipjumpChannel.ahk
+#include DbgOut.ahk
 #include %A_LineFile%\..\SQLiteDB
 #include Class_SQLiteDB.ahk
 
@@ -29,7 +30,7 @@ class ClipjumpDB extends SQLiteDB {
 	<hoppfrosch at hoppfrosch@gmx.de>: Original
 */	
     ; Versioning according SemVer http://semver.org/
-	_version := "0.5.0-#8.1" ; Version of class implementation
+	_version := "0.5.0-#10.1" ; Version of class implementation
 	; Simple incrementing version
 	_version_db := 1 ; version of the database scheme
 	_debug := 0
@@ -158,9 +159,7 @@ class ClipjumpDB extends SQLiteDB {
 	*/
 	addClipPKToChannelPK(pkCl, pkCh, bShouldUpdateExisting := 0) {
 		bSuccess := 0
-		if (this._debug) ; _DBG_ 
-			OutputDebug % ">[" A_ThisFunc "(pkCl=" pkCl ", pkCh=" pkCh ", bShouldUpdateExisting=" bShouldUpdateExisting ")]" ; _DBG_
-
+		dbgOut(">[" A_ThisFunc "(pkCl=" pkCl ", pkCh=" pkCh ", bShouldUpdateExisting=" bShouldUpdateExisting ")]", this.debug)
 		; Check whether the clip already is member of the channel
 		SQL := "SELECT * FROM clip2channel WHERE clip2channel.fk_clip = " pkCl " AND clip2channel.fk_channel = " pkCh ";"
 		If !base.Query(SQL, RecordSet)
@@ -183,8 +182,7 @@ class ClipjumpDB extends SQLiteDB {
 				bSuccess := 1
 			}
 		}
-		if (this._debug) ; _DBG_
-			OutputDebug % ">[" A_ThisFunc "(pkCl=" pkCl ", pkCh= " pkCh ", bShouldUpdateExisting=" bShouldUpdateExisting ")] => " bSucess ; _DBG
+		dbgOut(">[" A_ThisFunc "(pkCl=" pkCl ", pkCh= " pkCh ", bShouldUpdateExisting=" bShouldUpdateExisting ")] => " bSucess, this.debug)
 
 		return bSuccess
 	}
@@ -198,15 +196,13 @@ class ClipjumpDB extends SQLiteDB {
 	*/
 	addClipToChannelPK(clContent, pkCh, bShouldUpdateExisting := 0) {
 		bSuccess := 0
-		if (this._debug) ; _DBG_
-			OutputDebug % ">[" A_ThisFunc "(clContent=" clContent ", pkCh=" pkCh ", bShouldUpdateExisting=" bShouldUpdateExisting ")]" ; _DBG_
+		dbgOut(">[" A_ThisFunc "(clContent=" clContent ", pkCh=" pkCh ", bShouldUpdateExisting=" bShouldUpdateExisting ")]", this.debug)
 
 		Clip = new ClipjumpClip(clContent)
 		pkCl := Clip.DBFindOrCreate(this)
 		bSuccess := this.addClipPKToChannelPK(pkCl, pkCh, bShouldUpdateExisting) ; Add clip to given channel
 		
-		if (this._debug) ; _DBG_
-			OutputDebug % ">[" A_ThisFunc "(clContent=" clContent ", pkCh= " pkCh ", bShouldUpdateExisting=" bShouldUpdateExisting ")] => " bSucess ; _DBG
+		dbgOut(">[" A_ThisFunc "(clContent=" clContent ", pkCh= " pkCh ", bShouldUpdateExisting=" bShouldUpdateExisting ")] => " bSucess, this.debug)
 		return bSuccess
 	}
 
@@ -222,8 +218,7 @@ class ClipjumpDB extends SQLiteDB {
 	__New(filename := "clipjump.db", overwriteExisting := 0,  debug := 0) {
 		this._debug := debug
 		
-		if (this._debug) ; _DBG_
-			OutputDebug % ">[" A_ThisFunc "(filename=" filename ", overwriteExisting =" overwriteExisting ")] (version: " this._version ")" ; _DBG_
+		dbgOut(">[" A_ThisFunc "(filename=" filename ", overwriteExisting =" overwriteExisting ")] (version: " this._version ")", this.debug)
 			
 		; Store given parameters within properties
 		this._filename := filename
@@ -263,22 +258,18 @@ class ClipjumpDB extends SQLiteDB {
 
 		; Migrate DB to newer version if needed 
 		this.__migrateDB()
-		
-		if (this._debug) ; _DBG_
-			OutputDebug % "<[" A_ThisFunc "(filename=" filename ", overwriteExisting =" overwriteExisting ")] (version: " this._version ")" ; _DBG_
+		dbgOut("<[" A_ThisFunc "(filename=" filename ", overwriteExisting =" overwriteExisting ")] (version: " this._version ")", this.debug)
 	}
 	/*!
 		Destructor: 
 			Closes the database on object deconstruction
 	*/
 	__Delete() {
-		if (this._debug) ; _DBG_ 
-			OutputDebug % ">[" A_ThisFunc "()] (version: " this._version ")" ; _DBG_
+		dbgOut(">[" A_ThisFunc "()] (version: " this._version ")", this.debug)
 		If !base.CloseDB() {
 			throw, { what: " ClipjumpDB SQLite Error", message:  base.ErrorMsg, extra: base.ErrorCode, file: A_LineFile, line: A_LineNumber }
 		}
-		if (this._debug) ; _DBG_
-			OutputDebug % "<[" A_ThisFunc "()] (version: " this._version ")" ; _DBG_
+		dbgOut("<[" A_ThisFunc "()] (version: " this._version ")", this.debug)
 
 	}
 	/*!
@@ -286,20 +277,17 @@ class ClipjumpDB extends SQLiteDB {
 			Initializes the database by creating tables and fill in default values ....
 	*/
 	__InitDB() {
-		if (this._debug) ; _DBG_
-			OutputDebug % ">[" A_ThisFunc "()]" ; _DBG_
+		dbgOut(">[" A_ThisFunc "()]", this.debug)
 
 		SQL := "PRAGMA user_version=""" this._version_db """;"
-		if (this._debug) ; _DBG_
-			OutputDebug % "..[" A_ThisFunc "()] SQL: " SQL ; _DBG_
+		dbgOut("|[" A_ThisFunc "()] SQL: " SQL, this.debug)
 		If !base.Exec(SQL)
 			throw, { what: " ClipjumpDB SQLite Error", message:  base.ErrorMsg, extra: base.ErrorCode, file: A_LineFile, line: A_LineNumber }
 					
 		; ------------------------------------------------------------------------------------------------------------
 		; Enable foreign key support: http://www.sqlite.org/foreignkeys.html#fk_enable
 		SQL := "PRAGMA foreign_keys=ON;"
-		if (this._debug) ; _DBG_
-			OutputDebug % "..[" A_ThisFunc "()] SQL: " SQL ; _DBG_
+		dbgOut("|[" A_ThisFunc "()] SQL: " SQL, this.debug)
 		If !base.Exec(SQL)
 			throw, { what: " ClipjumpDB SQLite Error", message:  base.ErrorMsg, extra: base.ErrorCode, file: A_LineFile, line: A_LineNumber }
 
@@ -313,8 +301,7 @@ class ClipjumpDB extends SQLiteDB {
 		 . "fileid TEXT,"
 		 . "size INTEGER"
 		 . ");"
-		if (this._debug) ; _DBG_
-			OutputDebug % "..[" A_ThisFunc "()] SQL: " SQL ; _DBG_
+		dbgOut("|[" A_ThisFunc "()] SQL: " SQL, this.debug)
 		If !base.Exec(SQL)
 			throw, { what: " ClipjumpDB SQLite Error", message:  base.ErrorMsg, extra: base.ErrorCode, file: A_LineFile, line: A_LineNumber }
 
@@ -324,8 +311,7 @@ class ClipjumpDB extends SQLiteDB {
 		 . "id   INTEGER PRIMARY KEY AUTOINCREMENT,"
 		 . "name TEXT    UNIQUE      NOT NULL"
 		 . ");"
-		if (this._debug) ; _DBG_
-			OutputDebug % "..[" A_ThisFunc "()] SQL: " SQL ; _DBG_
+		dbgOut("|[" A_ThisFunc "()] SQL: " SQL, this.debug)
 		If !base.Exec(SQL)
 			throw, { what: " ClipjumpDB SQLite Error", message:  base.ErrorMsg, extra: base.ErrorCode, file: A_LineFile, line: A_LineNumber }
 
@@ -338,8 +324,7 @@ class ClipjumpDB extends SQLiteDB {
 		 . "  time TEXT NOT NULL,"
 		 . "  order_number INTEGER"
 		 . ");"
-		if (this._debug) ; _DBG_
-			OutputDebug % "..[" A_ThisFunc "()] SQL: " SQL ; _DBG_
+		dbgOut("|[" A_ThisFunc "()] SQL: " SQL, this.debug)
 		If !base.Exec(SQL)
 			throw, { what: " ClipjumpDB SQLite Error", message:  base.ErrorMsg, extra: base.ErrorCode, file: A_LineFile, line: A_LineNumber }
 
@@ -349,16 +334,14 @@ class ClipjumpDB extends SQLiteDB {
 		this.idChDefault := chDefault.DBFindOrCreate(this)
 		this.idChCurrent := this.idChDefault
 		
-		if (this._debug) ; _DBG_
-			OutputDebug % "<[" A_ThisFunc "()]" ; _DBG_
+		dbgOut("<[" A_ThisFunc "()]", this.debug)
 	}	
 	/*!
 		___migrateDB: 
 			Automatically migrate the Clipjump DB to the recent version
 	*/
 	__migrateDB() {
-		if (this._debug) ; _DBG_
-			OutputDebug % ">[" A_ThisFunc "()]" ; _DBG_
+		dbgOut(">[" A_ThisFunc "()]", this.debug)
 			
 		if (this._version_db > this.ver) { ; DB version supported with this implementation is NEWER than the given Database -> Migration
 			; Migration is performed incrementally 0 -> 1 -> 2 -> 3 ....
@@ -372,8 +355,7 @@ class ClipjumpDB extends SQLiteDB {
 			throw, { what: " ClipjumpDB Error", message: "Database cannot be downgraded" , extra: "-1", file: A_LineFile, line: A_LineNumber }
 		}
 
-		if (this._debug) ; _DBG_
-			OutputDebug % "<[" A_ThisFunc "()]" ; _DBG_
+		dbgOut("<[" A_ThisFunc "()]", this.debug)
 	}
 	/*!
 		__migrate_0: 
@@ -381,10 +363,7 @@ class ClipjumpDB extends SQLiteDB {
 	*/
 	__migrate_0() {
 		Local Row
-		
-		if (this._debug) ; _DBG_
-			OutputDebug % ">[" A_ThisFunc "()]" ; _DBG_
-			
+		dbgOut(">[" A_ThisFunc "()]", this.debug)
 		; Move old database to backup and open backup to different handle
 		base.CloseDB()
 		bakDB := this.filename ".v0"
@@ -416,8 +395,6 @@ class ClipjumpDB extends SQLiteDB {
 		 	Clip := new ClipjumpClip(content, type, this.debug)
 		 	pk := Clip.DBAddToChannel(this,this._chArchive, ts,,2) ; trailing "2" indicates that multiple clips per channel are allowed
 		}
-		
-		if (this._debug) ; _DBG_ 
-			OutputDebug % "<[" A_ThisFunc "()]" ; _DBG_
+		dbgOut("<[" A_ThisFunc "()]", this.debug)
 	}
 }

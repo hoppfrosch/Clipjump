@@ -12,6 +12,8 @@
 
 #include %A_LineFile%\..
 #include SHA-256.ahk
+#include DbgOut.ahk
+
 
 class ClipjumpClip {
 ; ******************************************************************************************************************************************
@@ -23,7 +25,7 @@ class ClipjumpClip {
 	<hoppfrosch at hoppfrosch@gmx.de>: Original
 */	
     ; Versioning according SemVer http://semver.org/
-	_version := "0.1.4-#8.1" ; Version of class implementation
+	_version := "0.1.4-#10.1" ; Version of class implementation
 	_debug := 0
 	_content := ""
 	_type := 0
@@ -141,8 +143,7 @@ class ClipjumpClip {
 	*/
 	DBAddToChannel(database, chInsert := "Default", ts := "", order_number := -1, insertMode := 0){
 		bSuccess := 0
-		if (this._debug) ; _DBG_
-			OutputDebug % ">[" A_ThisFunc "(sha256='" this.chksum "', channel='" chInsert "', ts='" ts "', order_number =" order_number ", insertMode= " insertMode ")]" ; _DBG_
+		dbgOut(">[" A_ThisFunc "(sha256='" this.chksum "', channel='" chInsert "', ts='" ts "', order_number =" order_number ", insertMode= " insertMode ")]", this.debug)
 
 		idClip := this.DBFindOrCreate(database)
 		channel := new ClipjumpChannel(chInsert, this.debug)
@@ -152,8 +153,7 @@ class ClipjumpClip {
 			ts := database.helper.timestamp()
 			
 		SQL := "SELECT * FROM clip2channel WHERE clip2channel.fk_clip = " idClip " AND clip2channel.fk_channel = " idChannel ";"
-		if (this._debug) ; _DBG_
-			OutputDebug % "..[" A_ThisFunc "(sha256='" this.chksum "', channel='" chInsert "')] SQL: " SQL ; _DBG_
+		dbgOut("|[" A_ThisFunc "(sha256='" this.chksum "', channel='" chInsert "')] SQL: " SQL, this.debug)
 		If !database.Query(SQL, RecordSet)
 			throw, { what: " ClipjumpDB SQLite Error", message:  database.ErrorMsg, extra: database.ErrorCode, file: A_LineFile, line: A_LineNumber }
 
@@ -161,14 +161,12 @@ class ClipjumpClip {
 		if(RecordSet.HasRows) {
 			if (insertMode==1) {
 				SQL := "update clip2channel set fk_clip=" idClip ", fk_channel=" idChannel ", time='" ts "', order_number=" order_number ";"
-				if (this._debug) ; _DBG_
-					OutputDebug % "..[" A_ThisFunc "(sha256='" this.chksum "', channel='" chInsert "')] SQL: " SQL ; _DBG_
+				dbgOut("|[" A_ThisFunc "(sha256='" this.chksum "', channel='" chInsert "')] SQL: " SQL, this.debug)
 				ret := database.Exec(SQL)
 				If !ret
 					throw, { what: " ClipjumpDB SQLite Error", message:  database.ErrorMsg, extra: database.ErrorCode, file: A_LineFile, line: A_LineNumber }
 			} else if (insertMode ==2) {
-				if (this._debug) ; _DBG_
-					OutputDebug % "..Clip already exists in channel - will be added as duplicate ..." ; _DBG_
+				dbgOut("|[" A_ThisFunc "(...):Clip already exists in channel - will be added as duplicate ...", this.debug)
 				; Unless an identical entry exists, the clip should be added again -> allows duplicate/multiple identical clips in one channel
 				shouldBeAdded := 1
 			}
@@ -181,24 +179,21 @@ class ClipjumpClip {
 			; 1.) The entry does not exist yet
 			; 2.) Duplicate/Multiple entries are allowed 
 			SQL := "INSERT INTO clip2channel (fk_clip, fk_channel, time, order_number) VALUES (" idClip "," idChannel ",'" ts "'," order_number ");"
-			if (this._debug) ; _DBG_
-				OutputDebug % "..[" A_ThisFunc "s(ha256='" this.chksum "', channel='" chInsert "')] SQL: " SQL ; _DBG_
+			dbgOut("|[" A_ThisFunc "(sha256='" this.chksum "', channel='" chInsert "')] SQL: " SQL, this.debug)
 			ret := database.Exec(SQL)
 			If !ret
 				throw, { what: " ClipjumpDB SQLite Error", message:  database.ErrorMsg, extra: database.ErrorCode, file: A_LineFile, line: A_LineNumber }
 		}
 
 		SQL := "SELECT * FROM clip2channel WHERE clip2channel.fk_clip = " idClip " AND clip2channel.fk_channel = " idChannel ";"
-		if (this._debug) ; _DBG_
-			OutputDebug % "..[" A_ThisFunc "(sha256='" this.chksum "', channel='" chInsert "')] SQL: " SQL ; _DBG_
+		dbgOut("|[" A_ThisFunc "(sha256='" this.chksum "', channel='" chInsert "')] SQL: " SQL, this.debug)
 		If !database.Query(SQL, RecordSet)
 			throw, { what: " ClipjumpDB SQLite Error", message:  database.ErrorMsg, extra: database.ErrorCode, file: A_LineFile, line: A_LineNumber }
 		
 		RecordSet.Next(Row)
 		pk := Row[1]
 
-		if (this._debug) ; _DBG_
-			OutputDebug % "<[" A_ThisFunc "(sha256='" this.chksum "', channel='" chInsert "')] -> pk:" pk ; _DBG_
+		dbgOut("<[" A_ThisFunc "(sha256='" this.chksum "', channel='" chInsert "')] -> pk:" pk, this.debug)
 
 		return pk
 	}
@@ -213,12 +208,10 @@ class ClipjumpClip {
 	*/
 	DBFind(database){
 		pk := 0
-		if (this._debug) ; _DBG_
-			OutputDebug % ">[" A_ThisFunc "(sha256='" this.chksum "')]" ; _DBG_
+		dbgOut(">[" A_ThisFunc "(sha256='" this.chksum "')]", this.debug)
 
 		SQL := "SELECT * FROM clip WHERE clip.sha256 = """ this.checksum """;"
-		if (this._debug) ; _DBG_
-			OutputDebug % "..[" A_ThisFunc "(sha256='" this.chksum "')] SQL: " SQL ; _DBG_
+		dbgOut("|[" A_ThisFunc "(sha256='" this.chksum "')] SQL: " SQL, this.debug)
 		If !database.Query(SQL, RecordSet)
 			throw, { what: " ClipjumpDB SQLite Error", message:  database.ErrorMsg, extra: database.ErrorCode, file: A_LineFile, line: A_LineNumber }
 		
@@ -227,8 +220,7 @@ class ClipjumpClip {
 			pk := Row[1]
 		}
 
-		if (this._debug) ; _DBG_
-			OutputDebug % "<[" A_ThisFunc "(sha256='" this.chksum "')] -> pk:" pk ; _DBG_
+		dbgOut("<[" A_ThisFunc "(sha256='" this.chksum "')] -> pk:" pk, this.debug)
 
 		return pk
 	}
@@ -244,23 +236,20 @@ class ClipjumpClip {
 	*/
 	DBFindOrCreate(database){
 		pk := 0
-		if (this._debug) ; _DBG_
-			OutputDebug % ">[" A_ThisFunc "(sha256='" this.chksum "')]" ; _DBG_
+		dbgOut(">[" A_ThisFunc "(sha256='" this.chksum "')]", this.debug)
 
 		pk := this.DBFind(database)
 		
 		if (pk == 0) {
 			SQL := "INSERT INTO Clip (data, sha256, type, fileid) VALUES (""" this.content """,""" this.checksum """,""" this.type """,""" this.fileid """);"
-			if (this._debug) ; _DBG_
-				OutputDebug % "..[" A_ThisFunc "(sha256='" this.chksum "')] SQL: " SQL ; _DBG_
+			dbgOut("|[" A_ThisFunc "(sha256='" this.chksum "')] SQL: " SQL, this.debug)
 			ret := database.Exec(SQL)
 			If !ret
 				throw, { what: " ClipjumpDB SQLite Error", message:  database.ErrorMsg, extra: database.ErrorCode, file: A_LineFile, line: A_LineNumber }
 			pk := this.DBFind(database)
 		}
 		
-		if (this._debug) ; _DBG_
-			OutputDebug % "<[" A_ThisFunc "(sha256='" this.chksum "')] -> pk:" pk ; _DBG_
+		dbgOut("<[" A_ThisFunc "(sha256='" this.chksum "')] -> pk:" pk, this.debug)
 
 		return pk
 	}
@@ -282,16 +271,14 @@ class ClipjumpClip {
 		this._type := type 	
 		this._checksum := SHA256(this._content)
 
-		if (this._debug) ; _DBG_
-			OutputDebug % "*[" A_ThisFunc "(content=""" content """, type =" type ")] (version: " this._version ")"	; _DBG_
+		dbgOut("=[" A_ThisFunc "(content=""" content """, type =" type ")] (version: " this._version ")", this.debug)
 	}
 	/*!
 		Destructor: 
 			Closes the database on object deconstruction
 	*/
 	__Delete() {
-		if (this._debug) ; _DBG_
-			OutputDebug % "*[" A_ThisFunc "(sha256='" this.chksum "')] (version: " this._version ")"	; _DBG_
+		dbgOut("=[" A_ThisFunc "(sha256='" this.chksum "')] (version: " this._version ")", this.debug)
 	}
 
 }

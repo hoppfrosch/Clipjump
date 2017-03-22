@@ -8,6 +8,8 @@
 #Include %A_ScriptDir%\..\lib\ClipjumpClip.ahk
 #Include %A_ScriptDir%\..\lib\ClipjumpChannel.ahk
 
+OutputDebug DBGVIEWCLEAR
+
 try  ; Attempts to execute code.
 {
 	DB := new ClipjumpDB(A_ScriptDir . "\clipjump.db",1,0)
