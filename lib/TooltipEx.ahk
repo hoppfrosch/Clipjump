@@ -3,6 +3,7 @@
 ;                 Code based on the original AHK ToolTip implementation in Script2.cpp.
 ; Tested with:    AHK 1.1.15.04 (A32/U32/U64)
 ; Tested on:      Win 8.1 Pro (x64)
+; Author:		  just me (https://autohotkey.com/boards/viewtopic.php?t=4350)
 ; Change history:
 ;     1.1.01.00/2014-08-30/just me     -  fixed  bug preventing multiline tooltips.
 ;     1.1.00.00/2014-08-25/just me     -  added icon support, added named function parameters.
